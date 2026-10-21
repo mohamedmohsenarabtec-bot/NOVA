@@ -48,20 +48,29 @@ class NovaRepository {
         onConflict: 'actor_id,target_id',
         ignoreDuplicates: true,
       );
-  RealtimeChannel? watchMessages(String id, void Function() changed) => client
-      .channel('chat:$id')
-      .onPostgresChanges(
-        event: PostgresChangeEvent.insert,
-        schema: 'public',
-        table: 'messages',
-        filter: PostgresChangeFilter(
-          type: PostgresChangeFilterType.eq,
-          column: 'conversation_id',
-          value: id,
-        ),
-        callback: (_) => changed(),
-      )
-      .subscribe();
+  Future<RealtimeChannel?> watchMessages(
+    String id,
+    void Function() changed,
+  ) async {
+    final token = client.auth.currentSession?.accessToken;
+    if (token == null) throw StateError('Session expired');
+    await client.realtime.setAuth(token);
+    return client
+        .channel('chat:$id')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'messages',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'conversation_id',
+            value: id,
+          ),
+          callback: (_) => changed(),
+        )
+        .subscribe();
+  }
+
   Future<List<DbRow>> blocks() =>
       client.from('blocks').select('target_id').eq('actor_id', uid);
   Future<void> unblock(String target) => client

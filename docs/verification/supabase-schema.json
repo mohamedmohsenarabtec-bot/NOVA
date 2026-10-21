@@ -1,0 +1,37 @@
+﻿{
+    "verified_utc":  "2026-10-21T14:10:54.0160129Z",
+    "project_ref":  "zywftgogopjdqjdceqzd",
+    "migration_versions":  [
+                               "202610210001",
+                               "202610210002",
+                               "202610210003",
+                               "202610210004"
+                           ],
+    "schema_version":  4,
+    "missing_or_unprotected_tables":  [
+
+                                      ],
+    "server_only_billing":  [
+                                {
+                                    "anon_execute":  false,
+                                    "authenticated_execute":  false,
+                                    "proname":  "apply_credit_delta"
+                                },
+                                {
+                                    "anon_execute":  false,
+                                    "authenticated_execute":  false,
+                                    "proname":  "record_verified_purchase"
+                                }
+                            ],
+    "realtime_messages":  true,
+    "bucket":  {
+                   "id":  "private-media",
+                   "limit":  5242880,
+                   "mime_types":  [
+                                      "image/jpeg",
+                                      "image/png",
+                                      "image/webp"
+                                  ],
+                   "public":  false
+               }
+}

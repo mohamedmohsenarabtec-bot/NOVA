@@ -46,7 +46,10 @@ class TestRepository extends NovaRepository {
   }
 
   @override
-  RealtimeChannel? watchMessages(String id, void Function() changed) => null;
+  Future<RealtimeChannel?> watchMessages(
+    String id,
+    void Function() changed,
+  ) async => null;
   @override
   Future<List<DbRow>> plans() async => [];
   @override

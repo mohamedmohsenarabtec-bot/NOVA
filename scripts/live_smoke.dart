@@ -1,10 +1,12 @@
 // Live owner-controlled smoke test. Uses only the public key for product flows.
 // Generated passwords/tokens remain in memory and never enter logs or files.
 import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
 import 'package:nova/core/config.dart';
+import 'package:supabase/supabase.dart';
 
 class ApiFailure implements Exception {
   final int status;
@@ -58,7 +60,14 @@ class Api {
 class TestAccount {
   final String id, email, password;
   String token;
-  TestAccount(this.id, this.email, this.password, this.token);
+  String refreshToken;
+  TestAccount(
+    this.id,
+    this.email,
+    this.password,
+    this.token,
+    this.refreshToken,
+  );
 }
 
 void require(bool value, String label) {
@@ -149,6 +158,7 @@ Future<void> main(List<String> args) async {
       email,
       password,
       data['access_token'] as String,
+      data['refresh_token'] as String,
     );
     accounts.add(account);
     return account;
@@ -161,6 +171,7 @@ Future<void> main(List<String> args) async {
       body: {'email': account.email, 'password': account.password},
     );
     account.token = (response.data as Map)['access_token'] as String;
+    account.refreshToken = (response.data as Map)['refresh_token'] as String;
   }
 
   Future<void> staffRole(TestAccount account, {required bool grant}) async {
@@ -174,7 +185,7 @@ Future<void> main(List<String> args) async {
         Uri.parse(url).host.split('.').first;
     require(RegExp(r'^[a-z]{20}$').hasMatch(ref), 'Invalid project reference');
     final tool = Platform.isWindows
-        ? '.tools/supabase/supabase.exe'
+        ? File('.tools/supabase/supabase.exe').absolute.path
         : 'supabase';
     final sql = grant
         ? "insert into public.staff_roles(user_id,role) values('${account.id}','moderator') on conflict do nothing;"
@@ -186,6 +197,7 @@ Future<void> main(List<String> args) async {
       'text',
       'db',
       'query',
+      '--linked',
       '--project-ref',
       ref,
       sql,
@@ -413,6 +425,82 @@ Future<void> main(List<String> args) async {
         );
       },
     );
+    stage = 'realtime';
+    var realtimeStage = 'initialize';
+    try {
+      await check(
+        'real authenticated Realtime channel receives a persistent new message',
+        () async {
+          final realtime = SupabaseClient(
+            url,
+            key,
+            authOptions: const AuthClientOptions(autoRefreshToken: false),
+          );
+          try {
+            realtimeStage = 'refresh authenticated session';
+            final session = (await realtime.auth.setSession(a.refreshToken))
+                .session!;
+            a.token = session.accessToken;
+            a.refreshToken = session.refreshToken!;
+            await realtime.realtime.setAuth(a.token);
+            realtimeStage = 'subscribe to private participant messages';
+            final subscribed = Completer<void>();
+            final delivered = Completer<void>();
+            final channel = realtime
+                .channel('nova-live-smoke:$conversation')
+                .onPostgresChanges(
+                  event: PostgresChangeEvent.insert,
+                  schema: 'public',
+                  table: 'messages',
+                  filter: PostgresChangeFilter(
+                    type: PostgresChangeFilterType.eq,
+                    column: 'conversation_id',
+                    value: conversation,
+                  ),
+                  callback: (payload) {
+                    if (payload.newRecord['body'] ==
+                            'NOVA realtime owner test' &&
+                        !delivered.isCompleted) {
+                      delivered.complete();
+                    }
+                  },
+                )
+                .subscribe((status, error) {
+                  if (status == RealtimeSubscribeStatus.subscribed &&
+                      !subscribed.isCompleted) {
+                    subscribed.complete();
+                  }
+                  if ((status == RealtimeSubscribeStatus.channelError ||
+                          status == RealtimeSubscribeStatus.timedOut) &&
+                      !subscribed.isCompleted) {
+                    subscribed.completeError(
+                      StateError('Realtime subscription rejected'),
+                    );
+                  }
+                });
+            await subscribed.future.timeout(const Duration(seconds: 30));
+            realtimeStage = 'receive insert event after subscription';
+            await rpc(b, 'send_message', {
+              'conversation': conversation,
+              'body': 'NOVA realtime owner test',
+            });
+            await delivered.future.timeout(const Duration(seconds: 30));
+            await realtime.removeChannel(channel);
+          } finally {
+            await realtime.dispose();
+          }
+        },
+      );
+    } catch (error) {
+      exitCode = 1;
+      final reason = '$realtimeStage: ${error.runtimeType}';
+      results.add({
+        'flow': 'Realtime delivery',
+        'status': 'FAIL',
+        'reason': reason,
+      });
+      stderr.writeln('FAIL: Realtime delivery — $reason');
+    }
     stage = 'safety';
     await check(
       'report is stored and normal-user moderation is denied',
@@ -434,18 +522,21 @@ Future<void> main(List<String> args) async {
     );
     if (args.contains('--verify-moderation')) {
       moderator = b;
-      await check('authorized temporary moderator sees report without private chat bypass', () async {
-        await staffRole(b, grant: true);
-        final reports = await rpc(b, 'moderation_queue') as List;
-        require(
-          reports.any(
-            (r) => r['reporter_id'] == a.id && r['subject_id'] == b.id,
-          ),
-          'Report absent from authorized queue',
-        );
-        await staffRole(b, grant: false);
-        moderator = null;
-      });
+      await check(
+        'authorized temporary moderator sees the submitted report',
+        () async {
+          await staffRole(b, grant: true);
+          final reports = await rpc(b, 'moderation_queue') as List;
+          require(
+            reports.any(
+              (r) => r['reporter_id'] == a.id && r['subject_id'] == b.id,
+            ),
+            'Report absent from authorized queue',
+          );
+          await staffRole(b, grant: false);
+          moderator = null;
+        },
+      );
     } else {
       results.add({
         'flow': 'authorized moderation review',
@@ -483,7 +574,7 @@ Future<void> main(List<String> args) async {
         ? error.toString()
         : error is StateError
         ? error.message
-        : 'Connection or execution error';
+        : 'Connection or execution error (${error.runtimeType})';
     results.add({'flow': stage, 'status': 'FAIL', 'reason': safeError});
     stderr.writeln('FAIL: $stage — $safeError');
   } finally {
@@ -515,8 +606,7 @@ Future<void> main(List<String> args) async {
       }
     }
     results.add({
-      'flow':
-          'browser reload, local-storage session restore and Realtime delivery',
+      'flow': 'browser reload and local-storage session restore',
       'status': 'NOT TESTED',
       'reason': 'API tests do not replace a real browser/device test',
     });

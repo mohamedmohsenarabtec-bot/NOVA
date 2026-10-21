@@ -1,10 +1,10 @@
-﻿# الإعداد والنشر — مشروع NOVA الموجود
+# الإعداد والنشر — مشروع NOVA الموجود
 
 لا تنشئ مشروع Supabase جديدًا، ولا تستخدم reset أو أوامر إسقاط الجداول على مشروع المالك. ملفات الحسابات والإعدادات المحلية والأدوات المحمولة مستبعدة من Git.
 
 ## ما تم التحقق منه
 
-المشروع `zywftgogopjdqjdceqzd` يستجيب لطلبات Auth بالمفتاح العام. التسجيل بالبريد مفعّل وتأكيد البريد معطّل فعلًا. لم يُغير هذا التنفيذ إعدادًا أمنيًا بعيدًا. آخر حالة فحص الجاهزية في `docs/verification/backend-connection.json`؛ المخطط غير جاهز ما لم يُرجع client_readiness الإصدار 4.
+المشروع `zywftgogopjdqjdceqzd` يستجيب لطلبات Auth بالمفتاح العام. التسجيل بالبريد مفعّل وتأكيد البريد معطّل فعلًا. لم يُغير هذا التنفيذ إعدادًا أمنيًا بعيدًا. آخر حالة فحص الجاهزية في `docs/verification/backend-connection.json`؛ طُبّقت الترحيلات الأربعة بعد فحص المخطط الفارغ وتأكد أن client_readiness يرجع الإصدار 4 فعليًا.
 
 ## تفويض إدارة Supabase دون إرسال أسرار
 
@@ -25,7 +25,7 @@
 ثم افحص مخطط المشروع قراءة فقط:
 
 ```powershell
-.\.tools\supabase\supabase.exe db query --project-ref zywftgogopjdqjdceqzd --file supabase/inspect_remote.sql
+.\.tools\supabase\supabase.exe db query --linked --project-ref zywftgogopjdqjdceqzd --file supabase/inspect_remote.sql
 ```
 
 CLI الحالي يدعم الاستعلام عبر Management API. نتائج الفحص لا تتضمن كلمات مرور أو نصوص رسائل. إذا وجدت جداول متعارضة أو مخططًا غير معروف، لا تطبّق الترحيلات فوقه. افحص تاريخ الترحيلات والمخطط والبيانات دون حذفها. جدول profiles الغائب في API لا يثبت أن بقية القاعدة فارغة.
@@ -36,7 +36,7 @@ CLI الحالي يدعم الاستعلام عبر Management API. نتائج �
 .\.tools\supabase\supabase.exe link --project-ref zywftgogopjdqjdceqzd
 .\.tools\supabase\supabase.exe db push --dry-run --skip-vault
 .\.tools\supabase\supabase.exe db push --skip-vault
-.\.tools\supabase\supabase.exe db query --project-ref zywftgogopjdqjdceqzd --file supabase/verify_remote.sql
+.\.tools\supabase\supabase.exe db query --linked --project-ref zywftgogopjdqjdceqzd --file supabase/verify_remote.sql
 ```
 
 إذا طلبت الأداة كلمة مرور قاعدة، لا ترسلها في المحادثة. توقّف واستخدم اتصال Supabase المفوض أو مسار Management API المدعوم بدلًا من طلب أسرار. لا تُعدّل سجل الترحيلات أو تُعلّم ملفات مطبقة دون دليل تنفيذ.
@@ -61,7 +61,7 @@ CLI الحالي يدعم الاستعلام عبر Management API. نتائج �
 
 ## GitHub وGitHub Pages
 
-ثُبتت أداة GitHub الرسمية محليًا في `.tools/github/bin/gh.exe`. سجّل المالك الدخول بنجاح إلى `mohamedmohsenarabtec-bot`. المستودع الخاص الذي أُنشئ هو:
+ثُبتت أداة GitHub الرسمية محليًا في `.tools/github/bin/gh.exe`. سجّل المالك الدخول بنجاح إلى `mohamedmohsenarabtec-bot`. أُنشئ المستودع خاصًا ثم أصبح عامًا بموافقة المالك الصريحة لتفعيل Pages على خطته الحالية. المستودع الذي رُفع إليه المصدر هو:
 
 https://github.com/mohamedmohsenarabtec-bot/NOVA
 

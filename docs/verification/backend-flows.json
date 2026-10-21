@@ -1,0 +1,78 @@
+﻿{
+    "completed_utc":  "2026-10-21T14:08:21.560792Z",
+    "results":  [
+                    {
+                        "flow":  "existing Auth settings allow signup without email delivery",
+                        "status":  "PASS"
+                    },
+                    {
+                        "flow":  "register two owner-controlled adults with immediate real sessions",
+                        "status":  "PASS"
+                    },
+                    {
+                        "flow":  "logout and sign in again",
+                        "status":  "PASS"
+                    },
+                    {
+                        "flow":  "duplicate account rejected",
+                        "status":  "PASS"
+                    },
+                    {
+                        "flow":  "invalid password rejected",
+                        "status":  "PASS"
+                    },
+                    {
+                        "flow":  "load and save profiles, preferences and interests",
+                        "status":  "PASS"
+                    },
+                    {
+                        "flow":  "discovery returns compatible test profile",
+                        "status":  "PASS"
+                    },
+                    {
+                        "flow":  "RLS prevents other-profile reads and direct privileged writes",
+                        "status":  "PASS"
+                    },
+                    {
+                        "flow":  "likes are deduplicated and reciprocal likes create one match",
+                        "status":  "PASS"
+                    },
+                    {
+                        "flow":  "both participants send and read persistent messages",
+                        "status":  "PASS"
+                    },
+                    {
+                        "flow":  "fresh sign-in reloads messages from database (API, not browser UI)",
+                        "status":  "PASS"
+                    },
+                    {
+                        "flow":  "real authenticated Realtime channel receives a persistent new message",
+                        "status":  "PASS"
+                    },
+                    {
+                        "flow":  "report is stored and normal-user moderation is denied",
+                        "status":  "PASS"
+                    },
+                    {
+                        "flow":  "authorized temporary moderator sees the submitted report",
+                        "status":  "PASS"
+                    },
+                    {
+                        "flow":  "block revokes both participants message reads and sends",
+                        "status":  "PASS"
+                    },
+                    {
+                        "flow":  "delete only account created by this test run",
+                        "status":  "PASS"
+                    },
+                    {
+                        "flow":  "delete only account created by this test run",
+                        "status":  "PASS"
+                    },
+                    {
+                        "flow":  "browser reload and local-storage session restore",
+                        "status":  "NOT TESTED",
+                        "reason":  "API tests do not replace a real browser/device test"
+                    }
+                ]
+}

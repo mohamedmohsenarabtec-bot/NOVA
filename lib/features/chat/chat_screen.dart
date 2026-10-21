@@ -78,7 +78,23 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     load();
-    channel = widget.repo.watchMessages(widget.conversationId, () => load());
+    unawaited(connect());
+  }
+
+  Future<void> connect() async {
+    try {
+      final connected = await widget.repo.watchMessages(
+        widget.conversationId,
+        () => load(),
+      );
+      if (mounted) {
+        channel = connected;
+      } else if (connected != null) {
+        await widget.repo.client.removeChannel(connected);
+      }
+    } catch (_) {
+      if (mounted) setState(() => failed = true);
+    }
   }
 
   Future<void> load({bool older = false}) async {
