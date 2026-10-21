@@ -98,6 +98,34 @@ Future<void> main(List<String> args) async {
     'Two distinct owner-controlled addresses required',
   );
   final api = Api(url, key);
+  final retain = args.contains('--retain-development-accounts');
+  String? suppliedPassword;
+  if (retain) {
+    require(
+      !args.contains('--verify-moderation'),
+      'Retained test users must remain ordinary users',
+    );
+    stderr.writeln(
+      'Read development password from ephemeral environment or secure stdin.',
+    );
+    suppliedPassword = Platform.environment['NOVA_DEVELOPMENT_PASSWORD'];
+    if (suppliedPassword == null) {
+      var echoDisabled = false;
+      try {
+        if (stdin.hasTerminal) {
+          stdin.echoMode = false;
+          echoDisabled = true;
+        }
+        suppliedPassword = stdin.readLineSync();
+      } finally {
+        if (echoDisabled) stdin.echoMode = true;
+      }
+    }
+    require(
+      suppliedPassword != null && suppliedPassword.length >= 12,
+      'Password must have at least 12 characters',
+    );
+  }
   final accounts = <TestAccount>[];
   final results = <Map<String, dynamic>>[];
   Future<void> check(String name, Future<void> Function() run) async {
@@ -140,6 +168,7 @@ Future<void> main(List<String> args) async {
   Future<TestAccount> signup(String email) async {
     final random = Random.secure();
     final password =
+        suppliedPassword ??
         'Nv!${base64Url.encode(List<int>.generate(30, (_) => random.nextInt(256)))}9a';
     final response = await api.call(
       'POST',
@@ -273,7 +302,7 @@ Future<void> main(List<String> args) async {
       for (final account in [a, b]) {
         await rpc(account, 'save_profile', {
           'data': {
-            'display_name': 'NOVA owner test',
+            'display_name': account == a ? 'Nova One' : 'Nova Two',
             'gender': account == a ? 'woman' : 'man',
             'seeking_gender': account == a ? 'man' : 'woman',
             'intention': 'serious',
@@ -440,8 +469,10 @@ Future<void> main(List<String> args) async {
           );
           try {
             realtimeStage = 'refresh authenticated session';
-            final session = (await realtime.auth.setSession(a.refreshToken))
-                .session!;
+            final session = (await realtime.auth.signInWithPassword(
+              email: a.email,
+              password: a.password,
+            )).session!;
             a.token = session.accessToken;
             a.refreshToken = session.refreshToken!;
             await realtime.realtime.setAuth(a.token);
@@ -558,8 +589,10 @@ Future<void> main(List<String> args) async {
     } else {
       results.add({
         'flow': 'authorized moderation review',
-        'status': 'NOT TESTED',
-        'reason': 'Use --verify-moderation after official CLI authorization',
+        'status': retain ? 'INCOMPLETE' : 'NOT TESTED',
+        'reason': retain
+            ? 'Retained accounts deliberately remain ordinary users; owner account not registered'
+            : 'Use --verify-moderation after official CLI authorization',
       });
     }
     await check(
@@ -586,6 +619,33 @@ Future<void> main(List<String> args) async {
         }
       },
     );
+    if (retain) {
+      await check(
+        'restore test chat after block test; both accounts remain ordinary',
+        () async {
+          await api.call(
+            'DELETE',
+            '/rest/v1/blocks?actor_id=eq.${a.id}&target_id=eq.${b.id}',
+            token: a.token,
+          );
+          for (final account in [a, b]) {
+            require(
+              (await rows(account, 'staff_roles?select=role')).isEmpty,
+              'Test user has staff access',
+            );
+            await login(account);
+            require(
+              (await rows(
+                    account,
+                    'messages?select=id&conversation_id=eq.$conversation',
+                  )).length ==
+                  3,
+              'Retained chat not restored',
+            );
+          }
+        },
+      );
+    }
   } catch (error) {
     exitCode = 1;
     final safeError = error is ApiFailure
@@ -607,7 +667,7 @@ Future<void> main(List<String> args) async {
         exitCode = 1;
       }
     }
-    for (final account in accounts.reversed) {
+    for (final account in retain ? <TestAccount>[] : accounts.reversed) {
       try {
         await rpc(account, 'delete_my_account');
         results.add({

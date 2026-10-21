@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/strings.dart';
+import '../../shared/app_controls.dart';
+import '../../shared/brand.dart';
 import '../../shared/repository.dart';
 import '../../shared/widgets.dart';
 
@@ -48,7 +50,11 @@ class _ConversationListState extends State<ConversationList> {
                   subtitle: Text(
                     rows[i]['created_at'].toString().substring(0, 10),
                   ),
-                  trailing: const Icon(Icons.chevron_right),
+                  trailing: Icon(
+                    Directionality.of(context) == TextDirection.rtl
+                        ? Icons.chevron_left
+                        : Icons.chevron_right,
+                  ),
                   onTap: () => context.go('/chat/${rows[i]['id']}'),
                 ),
               ),
@@ -152,7 +158,14 @@ class _ChatScreenState extends State<ChatScreen> {
           onPressed: () => context.go('/'),
           icon: const Icon(Icons.arrow_back),
         ),
-        title: Text(s.chats),
+        title: Row(
+          children: [
+            const NovaLogo(symbolOnly: true, size: 28),
+            const SizedBox(width: 10),
+            Flexible(child: Text(s.chats, overflow: TextOverflow.ellipsis)),
+          ],
+        ),
+        actions: const [AppControls()],
       ),
       body: Column(
         children: [
@@ -176,7 +189,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 : rows.isEmpty
                 ? EmptyState(
                     icon: Icons.auto_awesome,
-                    title: 'First Spark',
+                    title: s.t('شرارة البداية', 'First Spark'),
                     body: s.t(
                       'كيف يبدو يوم الإجازة المثالي بالنسبة لك؟',
                       'What does your perfect weekend look like?',
@@ -214,7 +227,16 @@ class _ChatScreenState extends State<ChatScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              SelectableText(message['body']),
+                              SelectableText(
+                                message['body'],
+                                style: TextStyle(
+                                  color: mine
+                                      ? Theme.of(context)
+                                            .colorScheme
+                                            .onPrimaryContainer
+                                      : Theme.of(context).colorScheme.onSurface,
+                                ),
+                              ),
                               Text(
                                 message['created_at'].toString().substring(
                                   11,

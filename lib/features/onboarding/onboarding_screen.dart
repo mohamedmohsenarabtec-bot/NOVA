@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/strings.dart';
+import '../../shared/app_controls.dart';
+import '../../shared/brand.dart';
 import '../../shared/repository.dart';
 import '../../shared/widgets.dart';
 
@@ -101,11 +104,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     };
     return Scaffold(
       appBar: AppBar(
-        title: Text(s.t('خطوة بخطوة', 'One step at a time')),
+        title: const NovaLogo(symbolOnly: true),
         actions: [
-          TextButton(
+          const AppControls(),
+          IconButton(
+            tooltip: s.t('خروج', 'Sign out'),
             onPressed: () => widget.repo.client.auth.signOut(),
-            child: Text(s.t('خروج', 'Sign out')),
+            icon: const Icon(Icons.logout),
           ),
         ],
       ),
@@ -115,6 +120,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: ListView(
             padding: const EdgeInsets.all(28),
             children: [
+              const Center(child: NovaLogo()),
+              TextButton.icon(
+                onPressed: () => context.go('/password'),
+                icon: const Icon(Icons.password),
+                label: Text(s.t('تغيير كلمة المرور', 'Change password')),
+              ),
+              const SizedBox(height: 24),
               LinearProgressIndicator(
                 value: (step + 1) / 5,
                 minHeight: 6,

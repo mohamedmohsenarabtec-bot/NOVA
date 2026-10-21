@@ -1,3 +1,19 @@
+# NOVA 0.2 — language, appearance, branding and account iteration
+
+Current iteration: 2026-10-21 (Africa/Cairo). This section takes precedence over the historical reports below.
+
+- Locale selector now displays the active language, with Arabic/English menu choices and compact عربي/EN on phones. A single shared control is used in authentication, onboarding, main navigation, chat, settings, password change and moderation. Arabic RTL and English LTR come from MaterialApp localization; directional navigation and chat alignment follow it.
+- Central device preferences persist locale and ThemeMode using shared_preferences. Default appearance follows System; the sun/moon button selects an explicit opposite appearance, and its menu restores System. ThemeData/ColorScheme supplies surfaces and paired foregrounds, including chat bubbles. Auth notices translate on locale changes; empty states scroll with enlarged text.
+- Original vector NOVA N/connection/spark branding is implemented in lib/shared/brand.dart. Exported SVG light/dark/monochrome wordmarks and symbols are in assets/brand. Reproduction: flutter test tool/generate_brand.dart. Android legacy/adaptive/themed icons, iOS icon sizes, native launch images, web favicon/manifest icons and HTML startup branding are generated locally from that geometry.
+- Two requested development accounts were really created using public Supabase Auth signup, with immediate sessions under the existing autoconfirm setting. The specified shared password stays outside tracked code, builds and documentation. Distinct persisted profiles, discovery, reciprocal match, persistent messages, logout/login, private data isolation and ordinary-user role checks passed. Both accounts are retained for owner testing, with the block test reversed so the chat remains usable.
+- The initial token-restoration Realtime probe timed out. A separate fresh-login verification then passed persistent live message delivery in BOTH directions. The test harness now uses fresh login for this check. No security policy was disabled.
+- At the owner's explicit subsequent request, their permanent account was created through normal Supabase Auth signup using their supplied identity and birth date. A random password was generated in memory and delivered only in ignored .local/owner-access.json, protected by the local Windows account ACL. No owner password or personal record is committed. The profile is hidden and onboarding preferences are left for the owner to choose.
+- Authorized database bootstrap assigned administrator only to the reviewed Auth UUID and wrote an audit event. Owner login, administrator role, real moderation queue access and denial of client role writes passed. Both development users retain zero staff roles. supabase/bootstrap_admin.sql is an operator-only, serialized bootstrap script, not a client endpoint. A password-change screen reauthenticates with the current password before updating Auth.
+- Local validation: formatting, analysis (no issues) and 25 Flutter tests passed. Release web and Android builds plus latest deployment/browser evidence are recorded when finished below. No signed iOS application was built on Windows; a macOS unsigned validation workflow was added. Android release currently uses the existing development signing identity and is for testing, not Play Store submission.
+- No reset, recreated project, history rewrite, privileged client key, fake authentication or production test credentials. Commercial payments, media uploads, push notifications, complete administration and store release setup remain outside this iteration.
+
+---
+
 # NOVA continuation status — 2026-10-21 (Africa/Cairo)
 
 ## Current work: existing Supabase project + GitHub preview

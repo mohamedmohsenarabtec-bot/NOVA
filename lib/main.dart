@@ -3,9 +3,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/app.dart';
 import 'core/config.dart';
+import 'core/preferences.dart';
+
+import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final preferences = NovaPreferences(await SharedPreferences.getInstance());
   String? startupError;
   if (Config.configured) {
     try {
@@ -28,5 +32,5 @@ Future<void> main() async {
       startupError = 'تعذر بدء الاتصال بالخدمة / Could not initialize backend';
     }
   }
-  runApp(NovaApp(startupError: startupError));
+  runApp(NovaApp(startupError: startupError, preferences: preferences));
 }

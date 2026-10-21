@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/strings.dart';
+import '../../shared/app_controls.dart';
 import '../../shared/repository.dart';
 import '../../shared/widgets.dart';
 
@@ -20,12 +21,30 @@ class _AdminScreenState extends State<AdminScreen> {
     final s = Strings.of(context);
     return Scaffold(
       appBar: AppBar(
+        actions: const [AppControls()],
         leading: IconButton(
           tooltip: s.t('رجوع', 'Back'),
           onPressed: () => context.go('/'),
           icon: const Icon(Icons.arrow_back),
         ),
         title: Text(s.t('NOVA • الإشراف', 'NOVA • Moderation')),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          children: [
+            TextButton.icon(
+              onPressed: () => context.go('/password'),
+              icon: const Icon(Icons.password),
+              label: Text(s.t('تغيير كلمة المرور', 'Change password')),
+            ),
+            TextButton.icon(
+              onPressed: () => widget.repo.client.auth.signOut(),
+              icon: const Icon(Icons.logout),
+              label: Text(s.t('تسجيل الخروج', 'Sign out')),
+            ),
+          ],
+        ),
       ),
       body: AsyncPane<List<DbRow>>(
         future: roles,

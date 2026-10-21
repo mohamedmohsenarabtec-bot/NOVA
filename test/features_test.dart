@@ -8,7 +8,10 @@ import 'package:nova/features/discover/discover_screen.dart';
 import 'package:nova/features/chat/chat_screen.dart';
 import 'package:nova/features/subscriptions/plans_screen.dart';
 import 'package:nova/features/admin/admin_screen.dart';
+import 'package:nova/features/settings/password_screen.dart';
 import 'package:nova/shared/repository.dart';
+import 'package:nova/core/preferences.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class TestRepository extends NovaRepository {
   TestRepository()
@@ -58,23 +61,37 @@ class TestRepository extends NovaRepository {
   Future<List<DbRow>> queue() async => [];
 }
 
-Widget host(Widget child) => MaterialApp(home: Scaffold(body: child));
+late NovaPreferences preferences;
+Widget host(Widget child) => PreferencesScope(
+  preferences: preferences,
+  child: MaterialApp(home: Scaffold(body: child)),
+);
 void main() {
   late TestRepository repo;
-  setUp(() => repo = TestRepository());
+  setUp(() async {
+    repo = TestRepository();
+    SharedPreferences.setMockInitialValues({'nova.locale': 'en'});
+    preferences = NovaPreferences(await SharedPreferences.getInstance());
+  });
   tearDown(() => repo.client.dispose());
+  testWidgets(
+    'password change validates confirmation before any Auth request',
+    (tester) async {
+      await tester.pumpWidget(host(PasswordScreen(repo: repo)));
+      final fields = find.byType(TextFormField);
+      await tester.enterText(fields.at(0), 'current-fixture');
+      await tester.enterText(fields.at(1), 'new-fixture-password');
+      await tester.enterText(fields.at(2), 'different-fixture');
+      await tester.tap(find.text('Save password'));
+      await tester.pumpAndSettle();
+      expect(find.text('Passwords do not match'), findsOneWidget);
+    },
+  );
   testWidgets('auth rejects malformed email without calling backend', (
     tester,
   ) async {
     await tester.pumpWidget(
-      host(
-        AuthScreen(
-          repo: repo,
-          languageButton: const SizedBox(),
-          recovery: false,
-          onRecovered: () {},
-        ),
-      ),
+      host(AuthScreen(repo: repo, recovery: false, onRecovered: () {})),
     );
     await tester.enterText(find.byType(TextFormField).first, 'bad-email');
     await tester.ensureVisible(find.widgetWithText(FilledButton, 'Sign in'));
@@ -98,14 +115,7 @@ void main() {
     'preview recovery explains missing delivery without an email request',
     (tester) async {
       await tester.pumpWidget(
-        host(
-          AuthScreen(
-            repo: repo,
-            languageButton: const SizedBox(),
-            recovery: false,
-            onRecovered: () {},
-          ),
-        ),
+        host(AuthScreen(repo: repo, recovery: false, onRecovered: () {})),
       );
       await tester.ensureVisible(find.text('Forgot password?'));
       await tester.pumpAndSettle();

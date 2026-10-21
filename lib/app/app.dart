@@ -7,12 +7,17 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/config.dart';
 import '../core/strings.dart';
+import '../core/preferences.dart';
+import '../core/theme.dart';
+import '../shared/app_controls.dart';
+import '../shared/brand.dart';
 import '../features/auth/auth_screen.dart';
 import '../features/auth/auth_feedback.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/discover/discover_screen.dart';
 import '../features/chat/chat_screen.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/settings/password_screen.dart';
 import '../features/subscriptions/plans_screen.dart';
 import '../features/admin/admin_screen.dart';
 import '../shared/repository.dart';
@@ -20,31 +25,28 @@ import '../shared/widgets.dart';
 
 class NovaApp extends StatefulWidget {
   final String? startupError;
-  const NovaApp({super.key, this.startupError});
+  final NovaPreferences preferences;
+  const NovaApp({super.key, this.startupError, required this.preferences});
   @override
   State<NovaApp> createState() => _NovaAppState();
 }
 
 class _NovaAppState extends State<NovaApp> {
-  Locale locale = const Locale('ar');
-  ThemeMode mode = ThemeMode.dark;
   late final GoRouter router = GoRouter(
     routes: [
       GoRoute(path: '/', builder: (_, _) => home()),
       GoRoute(path: '/admin', builder: (_, _) => home(admin: true)),
+      GoRoute(path: '/password', builder: (_, _) => home(password: true)),
       GoRoute(
         path: '/chat/:id',
         builder: (_, state) => home(chatId: state.pathParameters['id']),
       ),
     ],
   );
-  Widget home({bool admin = false, String? chatId}) {
+  Widget home({bool admin = false, bool password = false, String? chatId}) {
     if (!Config.configured || widget.startupError != null) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text(Config.name),
-          actions: [languageButton()],
-        ),
+        appBar: AppBar(title: const NovaLogo(), actions: const [AppControls()]),
         body: Builder(
           builder: (context) => EmptyState(
             icon: Icons.settings_input_component,
@@ -60,59 +62,7 @@ class _NovaAppState extends State<NovaApp> {
         ),
       );
     }
-    return SessionGate(
-      admin: admin,
-      chatId: chatId,
-      languageButton: languageButton(),
-      toggleTheme: () => setState(
-        () => mode = mode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark,
-      ),
-    );
-  }
-
-  Widget languageButton() => TextButton(
-    onPressed: () => setState(
-      () => locale = Locale(locale.languageCode == 'ar' ? 'en' : 'ar'),
-    ),
-    child: Text(locale.languageCode == 'ar' ? 'English' : 'العربية'),
-  );
-  ThemeData theme(Brightness brightness) {
-    final colors = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF9D8CFF),
-      brightness: brightness,
-      primary: brightness == Brightness.dark
-          ? const Color(0xFFFF9B91)
-          : const Color(0xFF99463F),
-      secondary: const Color(0xFF9D8CFF),
-      surface: brightness == Brightness.dark
-          ? const Color(0xFF11172B)
-          : const Color(0xFFF8F7FC),
-    );
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: colors,
-      scaffoldBackgroundColor: brightness == Brightness.dark
-          ? const Color(0xFF090E20)
-          : const Color(0xFFF8F7FC),
-      inputDecorationTheme: const InputDecorationTheme(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(18)),
-        ),
-      ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          minimumSize: const Size(48, 52),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-        ),
-      ),
-      cardTheme: CardThemeData(
-        elevation: 0,
-        color: colors.surfaceContainer,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      ),
-    );
+    return SessionGate(admin: admin, password: password, chatId: chatId);
   }
 
   @override
@@ -122,30 +72,34 @@ class _NovaAppState extends State<NovaApp> {
   }
 
   @override
-  Widget build(BuildContext context) => MaterialApp.router(
-    title: Config.name,
-    debugShowCheckedModeBanner: false,
-    locale: locale,
-    supportedLocales: const [Locale('ar'), Locale('en')],
-    localizationsDelegates: GlobalMaterialLocalizations.delegates,
-    theme: theme(Brightness.light),
-    darkTheme: theme(Brightness.dark),
-    themeMode: mode,
-    routerConfig: router,
+  Widget build(BuildContext context) => PreferencesScope(
+    preferences: widget.preferences,
+    child: AnimatedBuilder(
+      animation: widget.preferences,
+      builder: (context, _) => MaterialApp.router(
+        title: Config.name,
+        debugShowCheckedModeBanner: false,
+        locale: widget.preferences.locale,
+        supportedLocales: const [Locale('ar'), Locale('en')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        theme: NovaTheme.create(Brightness.light),
+        darkTheme: NovaTheme.create(Brightness.dark),
+        themeMode: widget.preferences.themeMode,
+        routerConfig: router,
+      ),
+    ),
   );
 }
 
 class SessionGate extends StatefulWidget {
   final bool admin;
+  final bool password;
   final String? chatId;
-  final Widget languageButton;
-  final VoidCallback toggleTheme;
   const SessionGate({
     super.key,
     required this.admin,
+    this.password = false,
     this.chatId,
-    required this.languageButton,
-    required this.toggleTheme,
   });
   @override
   State<SessionGate> createState() => _SessionGateState();
@@ -199,9 +153,10 @@ class _SessionGateState extends State<SessionGate> {
         repo: repo,
         recovery: recovery,
         onRecovered: () => setState(() => recovery = false),
-        languageButton: widget.languageButton,
       );
     }
+    if (widget.password) return PasswordScreen(repo: repo);
+    if (widget.admin) return AdminScreen(repo: repo);
     return AsyncPane<DbRow?>(
       future: profile!,
       retry: () => setState(refresh),
@@ -213,7 +168,6 @@ class _SessionGateState extends State<SessionGate> {
             onComplete: () => setState(refresh),
           );
         }
-        if (widget.admin) return AdminScreen(repo: repo);
         if (widget.chatId != null) {
           return ChatScreen(repo: repo, conversationId: widget.chatId!);
         }
@@ -222,7 +176,7 @@ class _SessionGateState extends State<SessionGate> {
           DiscoverScreen(repo: repo),
           ConversationList(repo: repo),
           PlansScreen(repo: repo),
-          SettingsScreen(repo: repo, toggleTheme: widget.toggleTheme),
+          SettingsScreen(repo: repo),
         ];
         final destinations = [
           NavigationDestination(
@@ -245,11 +199,8 @@ class _SessionGateState extends State<SessionGate> {
         ];
         return Scaffold(
           appBar: AppBar(
-            title: const Text(
-              Config.name,
-              style: TextStyle(letterSpacing: 5, fontWeight: FontWeight.w800),
-            ),
-            actions: [widget.languageButton],
+            title: const NovaLogo(),
+            actions: const [AppControls()],
           ),
           body: LayoutBuilder(
             builder: (context, constraints) {

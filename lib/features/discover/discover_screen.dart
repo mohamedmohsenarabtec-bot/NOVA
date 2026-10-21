@@ -31,9 +31,9 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
         await showDialog<void>(
           context: context,
           builder: (context) => AlertDialog(
-            icon: const Icon(
+            icon: Icon(
               Icons.favorite,
-              color: Color(0xFFFF9B91),
+              color: Theme.of(context).colorScheme.primary,
               size: 56,
             ),
             title: Text(
@@ -87,7 +87,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
               IconButton(
                 tooltip: s.retry,
                 onPressed: reload,
-                icon: const Icon(Icons.refresh),
+                icon: Icon(Icons.refresh),
               ),
             ],
           ),
@@ -222,7 +222,7 @@ class _DiscoverScreenState extends State<DiscoverScreen> {
                                     onPressed: busy
                                         ? null
                                         : () => action(p, 'like'),
-                                    icon: const Icon(Icons.favorite_outline),
+                                    icon: Icon(Icons.favorite_outline),
                                     label: Text(s.t('إعجاب', 'Like')),
                                   ),
                                 ),

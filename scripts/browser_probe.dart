@@ -161,6 +161,7 @@ class BrowserProbe {
     required String conversationId,
     required String expectedMessage,
     bool readinessOnly = false,
+    bool adminOnly = false,
   }) async {
     final uri = Uri.parse(url);
     if (uri.scheme != 'https' ||
@@ -218,7 +219,20 @@ class BrowserProbe {
       stage = 'activate Flutter accessibility';
       await browser.enableSemantics();
       stage = 'select English';
-      await browser.click('[role=button]', 'English');
+      await browser.click('[role=button]', 'اللغة: العربية');
+      await browser.click(
+        '[role=menuitemcheckbox], [role=menuitem], [role=button]',
+        'English',
+      );
+      await browser.waitText('Sign in');
+      stage = 'persist dark appearance and English locale';
+      await browser.click('[role=button]', 'Switch to dark theme');
+      await browser.waitText('Switch to light theme');
+      await browser.command('Page.reload', {'ignoreCache': true});
+      await Future<void>.delayed(const Duration(seconds: 2));
+      await browser.enableSemantics();
+      await browser.waitText('Language: English');
+      await browser.waitText('Switch to light theme');
       await browser.waitText('Sign in');
       if (readinessOnly) {
         await browser.fill('Email', 'local-ui-probe');
@@ -231,19 +245,46 @@ class BrowserProbe {
       await browser.fill('Email', email);
       await browser.fill('Password', password);
       await browser.click('[role=button]', 'Sign in');
+      if (adminOnly) {
+        stage = 'open authorized owner administration';
+        await browser.command('Page.navigate', {
+          'url': uri.replace(fragment: '/admin').toString(),
+        });
+        await browser.enableSemantics();
+        await browser.waitText('NOVA • Moderation');
+        await browser.waitText('safety');
+        await browser.screenshot('.local/owner-admin.png');
+        await browser.click('[role=button]', 'Change password');
+        await browser.waitText('Current password');
+        await browser.waitText('Confirm new password');
+        await browser.screenshot('.local/owner-password.png');
+        return;
+      }
       await browser.waitText('People, with intention');
       stage = 'open real persistent conversation';
       final chatUrl = uri.replace(fragment: '/chat/$conversationId').toString();
       await browser.command('Page.navigate', {'url': chatUrl});
       await browser.enableSemantics();
       await browser.waitPersistentMessage(expectedMessage);
+      await browser.waitText('Language: English');
+      await browser.waitText('Switch to light theme');
       await browser.screenshot('.local/browser-before-reload.png');
+      stage = 'switch live chat to Arabic';
+      await browser.click('[role=button]', 'Language: English');
+      await browser.click(
+        '[role=menuitemcheckbox], [role=menuitem], [role=button]',
+        'العربية',
+      );
+      await browser.waitText('رسالتك');
+      await browser.waitText('اللغة: العربية');
       stage = 'reload browser and restore session';
       browser.messageRequests.clear();
       await browser.command('Page.reload', {'ignoreCache': true});
       await Future<void>.delayed(const Duration(seconds: 2));
       await browser.enableSemantics();
       await browser.waitPersistentMessage(expectedMessage);
+      await browser.waitText('اللغة: العربية');
+      await browser.waitText('تفعيل المظهر الفاتح');
       await browser.screenshot('.local/browser-after-reload.png');
     } catch (error) {
       if (browser != null) {
@@ -267,14 +308,19 @@ class BrowserProbe {
     } finally {
       if (browser != null) {
         try {
+          await browser.command('Storage.clearDataForOrigin', {
+            'origin': uri.origin,
+            'storageTypes': 'all',
+          });
+        } catch (_) {}
+        try {
           await browser.command('Browser.close');
         } catch (_) {}
         await browser.socket.close();
       }
       chrome.kill();
       http.close(force: true);
-      // This isolated ignored Chrome profile is retained for diagnosis only.
-      // Its temporary Auth account is deleted by live_smoke's finally block.
+      // Clear the isolated test browser's storage, including session tokens.
     }
   }
 }

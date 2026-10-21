@@ -4,18 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/strings.dart';
+import '../../shared/app_controls.dart';
 import '../../shared/repository.dart';
 import '../../shared/widgets.dart';
 import 'preferences_dialog.dart';
 
 class SettingsScreen extends StatelessWidget {
   final NovaRepository repo;
-  final VoidCallback toggleTheme;
-  const SettingsScreen({
-    super.key,
-    required this.repo,
-    required this.toggleTheme,
-  });
+  const SettingsScreen({super.key, required this.repo});
   @override
   Widget build(BuildContext context) {
     final s = Strings.of(context);
@@ -25,16 +21,20 @@ class SettingsScreen extends StatelessWidget {
         Text(s.settings, style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 24),
         ListTile(
+          leading: const Icon(Icons.password),
+          title: Text(s.t('تغيير كلمة المرور', 'Change password')),
+          onTap: () => context.go('/password'),
+        ),
+        ListTile(
           leading: const Icon(Icons.tune),
           title: Text(
             s.t('تفضيلات الاكتشاف والعمر', 'Discovery and age preferences'),
           ),
           onTap: () => editPreferences(context, repo),
         ),
-        ListTile(
-          leading: const Icon(Icons.contrast),
-          title: Text(s.t('تغيير المظهر', 'Switch theme')),
-          onTap: toggleTheme,
+        const Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: AppControls(),
         ),
         ListTile(
           leading: const Icon(Icons.visibility_outlined),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/config.dart';
+import '../../shared/app_controls.dart';
+import '../../shared/brand.dart';
 import '../../core/strings.dart';
 import '../../core/validation.dart';
 import '../../shared/repository.dart';
@@ -9,13 +11,11 @@ import 'auth_feedback.dart';
 
 class AuthScreen extends StatefulWidget {
   final NovaRepository repo;
-  final Widget languageButton;
   final bool recovery;
   final VoidCallback onRecovered;
   const AuthScreen({
     super.key,
     required this.repo,
-    required this.languageButton,
     required this.recovery,
     required this.onRecovered,
   });
@@ -29,7 +29,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final password = TextEditingController();
   bool register = false, consent = false, busy = false;
   DateTime? birth;
-  String? notice;
+  String Function(Strings)? notice;
   @override
   void dispose() {
     email.dispose();
@@ -38,10 +38,9 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> submit({bool reset = false}) async {
-    final s = Strings.of(context);
     if (reset && !Config.emailRecoveryEnabled) {
       setState(
-        () => notice = s.t(
+        () => notice = (s) => s.t(
           'استعادة كلمة المرور بالبريد غير مفعّلة في هذه التجربة. لن نرسل رسالة. يلزم إعداد إرسال البريد قبل تفعيلها.',
           'Email password recovery is not enabled for this preview. No email was sent. Configure email delivery before enabling recovery.',
         ),
@@ -50,10 +49,9 @@ class _AuthScreenState extends State<AuthScreen> {
     }
     if (reset && !Validation.email(email.text)) {
       setState(
-        () => notice = s.t(
-          'أدخل بريدًا صالحًا أولًا.',
-          'Enter a valid email first.',
-        ),
+        () =>
+            notice = (s) =>
+                s.t('أدخل بريدًا صالحًا أولًا.', 'Enter a valid email first.'),
       );
       return;
     }
@@ -68,7 +66,7 @@ class _AuthScreenState extends State<AuthScreen> {
             birth == null ||
             !Validation.adult(birth!, DateTime.now()))) {
       setState(
-        () => notice = s.t(
+        () => notice = (s) => s.t(
           'أكّد عمرك وموافقتك على الشروط أولًا.',
           'Confirm your age and consent first.',
         ),
@@ -82,7 +80,7 @@ class _AuthScreenState extends State<AuthScreen> {
     try {
       if (reset) {
         await widget.repo.client.auth.resetPasswordForEmail(email.text.trim());
-        notice = s.t(
+        notice = (s) => s.t(
           'إذا كان الحساب مؤهلًا فقد طُلبت رسالة استعادة. وصولها يعتمد على إعداد البريد.',
           'If eligible, a recovery email was requested. Delivery depends on email configuration.',
         );
@@ -97,7 +95,7 @@ class _AuthScreenState extends State<AuthScreen> {
           password: password.text,
           birth: birth!,
         );
-        notice = signupFeedback(s, result);
+        notice = (s) => signupFeedback(s, result);
       } else {
         await widget.repo.client.auth.signInWithPassword(
           email: email.text.trim(),
@@ -105,7 +103,7 @@ class _AuthScreenState extends State<AuthScreen> {
         );
       }
     } catch (error) {
-      notice = authFeedback(s, error);
+      notice = (s) => authFeedback(s, error);
     }
     if (mounted) setState(() => busy = false);
   }
@@ -114,21 +112,14 @@ class _AuthScreenState extends State<AuthScreen> {
   Widget build(BuildContext context) {
     final s = Strings.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(Config.name),
-        actions: [widget.languageButton],
-      ),
+      appBar: AppBar(title: const NovaLogo(), actions: const [AppControls()]),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 480),
           child: ListView(
             padding: const EdgeInsets.all(28),
             children: [
-              const Icon(
-                Icons.auto_awesome,
-                size: 54,
-                color: Color(0xFFFF9B91),
-              ),
+              const Center(child: NovaLogo(symbolOnly: true, size: 76)),
               const SizedBox(height: 24),
               Text(
                 s.t(
@@ -147,6 +138,7 @@ class _AuthScreenState extends State<AuthScreen> {
               const SizedBox(height: 32),
               Form(
                 key: form,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -292,7 +284,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         padding: const EdgeInsets.all(16),
                         child: Semantics(
                           liveRegion: true,
-                          child: Text(notice!),
+                          child: Text(notice!(s)),
                         ),
                       ),
                   ],

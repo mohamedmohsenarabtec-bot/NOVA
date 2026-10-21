@@ -55,6 +55,10 @@ jobs:
         env:
           PAGES_BASE_PATH: ${{ steps.pages.outputs.base_path }}
         run: flutter build web --release --base-href="${PAGES_BASE_PATH%/}/" --dart-define-from-file=.local/pages.json
+      - name: Record deployed source revision
+        env:
+          NOVA_SOURCE_COMMIT: ${{ github.sha }}
+        run: python3 -c "import json, os, pathlib; pathlib.Path('build/web/build-info.json').write_text(json.dumps({'commit':os.environ['NOVA_SOURCE_COMMIT']}))"
       - uses: actions/upload-pages-artifact@v4
         with:
           path: build/web
