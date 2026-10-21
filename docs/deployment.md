@@ -80,7 +80,7 @@ Workflow النشر هو `.github/workflows/pages.yml`: تثبيت Flutter ال�
 
 في **Settings → Pages → Build and deployment → Source** اختر **GitHub Actions**، أو استخدم API المفوض إذا كان الحساب يدعم ذلك. المستودع الخاص يحتاج خطة GitHub تدعم Pages الخاصة. إذا رفض GitHub ذلك، لا تحوّل المستودع إلى عام تلقائيًا: يلزم اختيار المالك بعد توضيح أن المصدر سيصبح عامًا. [متطلبات Pages الرسمية](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
 
-لا يوجد رابط تطبيق مؤكد حتى ينجح workflow ويُسترجع page_url الحقيقي من GitHub. عنوان المستودع يعرض المصدر، وليس التطبيق. GitHub Pages يستضيف عميل Flutter الثابت؛ Supabase يظل مسؤولًا عن Auth وقاعدة البيانات والصلاحيات.
+نجح workflow النشر واستُرجع رابط التطبيق الفعلي من GitHub وتأكد HTTP 200: https://mohamedmohsenarabtec-bot.github.io/NOVA/ . مرجع النشر والاختبار في docs/verification/pages.json. عنوان المستودع يعرض المصدر، وليس التطبيق. GitHub Pages يستضيف عميل Flutter الثابت؛ Supabase يظل مسؤولًا عن Auth وقاعدة البيانات والصلاحيات.
 
 بعد نجاح النشر اضبط Supabase Site URL على أصل ومعرّف مسار Pages الفعلي، وأضف رابط العودة المطلوب بدقة. للويب المحلي استخدم http://localhost:3000. استعادة البريد غير مفعلة هنا. لا نحتاج روابط بريد لتجربة التسجيل الفوري.
 
@@ -98,7 +98,7 @@ Workflow النشر هو `.github/workflows/pages.yml`: تثبيت Flutter ال�
 dart run scripts/live_smoke.dart config/local.json OWNER_EMAIL+nova1@example.com OWNER_EMAIL+nova2@example.com --verify-moderation
 ```
 
-العناوين السابقة أمثلة فقط؛ لا تُستخدم بدل عناوين المالك. يولّد السكربت كلمات مرور في الذاكرة، ويختبر الحسابين والصلاحيات، ويستخدم جلسة CLI لتعيين وإلغاء دور moderator لحساب الاختبار فقط عند طلب ذلك. يحذف فقط الحسابات التي أنشأها هذا التشغيل في finally. لا يغير الحسابات الموجودة أو يحاول إعادة تعيين كلمات مرورها. النتائج محلية في `.local/live-results.json` دون كلمات مرور أو رموز جلسات. نتائج API لا تثبت إعادة تحميل المتصفح أو التسليم عبر Realtime؛ يلزم اختبارهما بمتصفح فعلي.
+العناوين السابقة أمثلة فقط؛ لا تُستخدم بدل عناوين المالك. يولّد السكربت كلمات مرور في الذاكرة، ويختبر الحسابين والصلاحيات، ويستخدم جلسة CLI لتعيين وإلغاء دور moderator لحساب الاختبار فقط عند طلب ذلك. يحذف فقط الحسابات التي أنشأها هذا التشغيل في finally. لا يغير الحسابات الموجودة أو يحاول إعادة تعيين كلمات مرورها. النتائج محلية في `.local/live-results.json` دون كلمات مرور أو رموز جلسات. نجح اختبار Realtime الفعلي. لإضافة فحص المتصفح استخدم --browser-url=https://mohamedmohsenarabtec-bot.github.io/NOVA/؛ هذا المسار نُفّذ في Chrome ونجح في تسجيل الدخول وإعادة تحميل المحادثة واستعادة الجلسة والرسائل. التحقق يجمع استجابة الرسائل الحقيقية وعناصر الواجهة وصورًا محلية للمراجعة، دون تسجيل كلمات مرور أو رموز جلسات.
 
 لـpgTAP استخدم `supabase test db` على بيئة محلية معزولة أو وظيفة CI database، وليس reset على المشروع البعيد. هذه الاختبارات داخل transaction وتتراجع في النهاية. أي اختبار غير منفذ يسجل NOT TESTED.
 

@@ -8,6 +8,8 @@ import 'dart:math';
 import 'package:nova/core/config.dart';
 import 'package:supabase/supabase.dart';
 
+import 'browser_probe.dart';
+
 class ApiFailure implements Exception {
   final int status;
   final String code;
@@ -501,6 +503,22 @@ Future<void> main(List<String> args) async {
       });
       stderr.writeln('FAIL: Realtime delivery — $reason');
     }
+    final browserArgument = args
+        .where((v) => v.startsWith('--browser-url='))
+        .firstOrNull;
+    if (browserArgument != null) {
+      stage = 'browser';
+      await check(
+        'deployed UI login and real browser reload restore session and persistent chat',
+        () => BrowserProbe.verify(
+          url: browserArgument.substring('--browser-url='.length),
+          email: a.email,
+          password: a.password,
+          conversationId: conversation,
+          expectedMessage: 'NOVA owner test B',
+        ),
+      );
+    }
     stage = 'safety';
     await check(
       'report is stored and normal-user moderation is denied',
@@ -605,11 +623,18 @@ Future<void> main(List<String> args) async {
         exitCode = 1;
       }
     }
-    results.add({
-      'flow': 'browser reload and local-storage session restore',
-      'status': 'NOT TESTED',
-      'reason': 'API tests do not replace a real browser/device test',
-    });
+    if (!results.any(
+      (r) =>
+          r['flow'] ==
+              'deployed UI login and real browser reload restore session and persistent chat' &&
+          r['status'] == 'PASS',
+    )) {
+      results.add({
+        'flow': 'browser reload and local-storage session restore',
+        'status': 'NOT TESTED',
+        'reason': 'API tests do not replace a real browser/device test',
+      });
+    }
     Directory('.local').createSync(recursive: true);
     File('.local/live-results.json').writeAsStringSync(
       const JsonEncoder.withIndent('  ').convert({

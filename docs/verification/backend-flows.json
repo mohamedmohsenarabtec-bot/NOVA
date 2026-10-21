@@ -1,5 +1,5 @@
 ﻿{
-    "completed_utc":  "2026-10-21T14:08:21.560792Z",
+    "completed_utc":  "2026-10-21T14:33:44.329630Z",
     "results":  [
                     {
                         "flow":  "existing Auth settings allow signup without email delivery",
@@ -50,6 +50,10 @@
                         "status":  "PASS"
                     },
                     {
+                        "flow":  "deployed UI login and real browser reload restore session and persistent chat",
+                        "status":  "PASS"
+                    },
+                    {
                         "flow":  "report is stored and normal-user moderation is denied",
                         "status":  "PASS"
                     },
@@ -68,11 +72,6 @@
                     {
                         "flow":  "delete only account created by this test run",
                         "status":  "PASS"
-                    },
-                    {
-                        "flow":  "browser reload and local-storage session restore",
-                        "status":  "NOT TESTED",
-                        "reason":  "API tests do not replace a real browser/device test"
                     }
                 ]
 }
