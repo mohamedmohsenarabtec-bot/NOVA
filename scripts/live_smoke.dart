@@ -498,11 +498,15 @@ Future<void> main(List<String> args) async {
                     }
                   },
                 )
-                .subscribe((status, error) {
-                  if (status == RealtimeSubscribeStatus.subscribed &&
+                .onSystemEvents((event) {
+                  if (event is Map &&
+                      event['extension'] == 'postgres_changes' &&
+                      event['status'] == 'ok' &&
                       !subscribed.isCompleted) {
                     subscribed.complete();
                   }
+                })
+                .subscribe((status, error) {
                   if ((status == RealtimeSubscribeStatus.channelError ||
                           status == RealtimeSubscribeStatus.timedOut) &&
                       !subscribed.isCompleted) {

@@ -68,6 +68,15 @@ class NovaRepository {
           ),
           callback: (_) => changed(),
         )
+        .onSystemEvents((event) {
+          // SUBSCRIBED can precede the replication listener. Re-fetch after
+          // actual readiness (also on reconnect) to close that delivery gap.
+          if (event is Map &&
+              event['extension'] == 'postgres_changes' &&
+              event['status'] == 'ok') {
+            changed();
+          }
+        })
         .subscribe();
   }
 

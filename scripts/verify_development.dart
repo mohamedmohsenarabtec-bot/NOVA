@@ -3,6 +3,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:supabase/supabase.dart';
 import 'package:nova/core/config.dart';
@@ -106,11 +107,15 @@ Future<void> main(List<String> args) async {
                 }
               },
             )
-            .subscribe((status, error) {
-              if (status == RealtimeSubscribeStatus.subscribed &&
+            .onSystemEvents((event) {
+              if (event is Map &&
+                  event['extension'] == 'postgres_changes' &&
+                  event['status'] == 'ok' &&
                   !subscribed.isCompleted) {
                 subscribed.complete();
               }
+            })
+            .subscribe((status, error) {
               if (error != null && !subscribed.isCompleted) {
                 subscribed.completeError(
                   StateError('Realtime subscription error'),
@@ -133,6 +138,30 @@ Future<void> main(List<String> args) async {
         } finally {
           await clients[i].removeChannel(channel);
         }
+      });
+    }
+    if (args.contains('--verify-password-change')) {
+      await check('real Auth password update works and original development password is restored', () async {
+        final client = clients.first;
+        final temporary =
+            'Nv!${base64UrlEncode(List.generate(30, (_) => Random.secure().nextInt(256)))}9a';
+        await client.auth.signInWithPassword(
+          email: args[1],
+          password: password,
+        );
+        try {
+          await client.auth.updateUser(UserAttributes(password: temporary));
+          await client.auth.signInWithPassword(
+            email: args[1],
+            password: temporary,
+          );
+        } finally {
+          await client.auth.updateUser(UserAttributes(password: password));
+        }
+        await client.auth.signInWithPassword(
+          email: args[1],
+          password: password,
+        );
       });
     }
     final browserUrl = args

@@ -85,7 +85,7 @@ class BrowserProbe {
 
   Future<void> click(String selector, String text) async {
     final clicked = await evaluate('''(()=>{$dom
-      const e=all(${jsonEncode(selector)}).find(e=>label(e)===${jsonEncode(text)});
+      const e=all(${jsonEncode(selector)}).find(e=>label(e)===${jsonEncode(text)}) || all(${jsonEncode(selector)}).find(e=>label(e).includes(${jsonEncode(text)}));
       if(!e) return false; e.click(); return true;
     })()''');
     if (clicked != true) {
@@ -119,6 +119,48 @@ class BrowserProbe {
         true,
     'expected application content',
   );
+
+  Future<void> selectLanguage({required bool english}) async {
+    await click(
+      '[role=button]',
+      english ? 'اللغة: العربية' : 'Language: English',
+    );
+    await waitText(english ? 'English' : 'العربية');
+    File('.local/language-menu-dom.json').writeAsStringSync(
+      jsonEncode(
+        await evaluate(
+          "(()=>{$dom return all('[role=menuitemcheckbox]').map(e=>e.outerHTML);})()",
+        ),
+      ),
+    );
+    await evaluate(
+      '''(()=>{$dom const e=all('[role=menuitemcheckbox]').find(e=>label(e)===${jsonEncode(english ? 'English' : 'العربية')}); if(e){const target=e.querySelector('input')||e;target.focus();target.click();} })()''',
+    );
+    // Use native menu keyboard navigation: semantics text nodes can consume a
+    // synthetic DOM click without activating the enclosing checked menu item.
+    for (final key in ['Enter']) {
+      await command('Input.dispatchKeyEvent', {
+        'type': 'keyDown',
+        'key': key,
+        'code': key,
+        'windowsVirtualKeyCode': key == 'Enter'
+            ? 13
+            : key == 'End'
+            ? 35
+            : 36,
+      });
+      await command('Input.dispatchKeyEvent', {
+        'type': 'keyUp',
+        'key': key,
+        'code': key,
+        'windowsVirtualKeyCode': key == 'Enter'
+            ? 13
+            : key == 'End'
+            ? 35
+            : 36,
+      });
+    }
+  }
 
   Future<void> waitPersistentMessage(String expected) => until(() async {
     var received = false;
@@ -219,11 +261,8 @@ class BrowserProbe {
       stage = 'activate Flutter accessibility';
       await browser.enableSemantics();
       stage = 'select English';
-      await browser.click('[role=button]', 'اللغة: العربية');
-      await browser.click(
-        '[role=menuitemcheckbox], [role=menuitem], [role=button]',
-        'English',
-      );
+      await browser.selectLanguage(english: true);
+      stage = 'English sign-in UI';
       await browser.waitText('Sign in');
       stage = 'persist dark appearance and English locale';
       await browser.click('[role=button]', 'Switch to dark theme');
@@ -270,11 +309,7 @@ class BrowserProbe {
       await browser.waitText('Switch to light theme');
       await browser.screenshot('.local/browser-before-reload.png');
       stage = 'switch live chat to Arabic';
-      await browser.click('[role=button]', 'Language: English');
-      await browser.click(
-        '[role=menuitemcheckbox], [role=menuitem], [role=button]',
-        'العربية',
-      );
+      await browser.selectLanguage(english: false);
       await browser.waitText('رسالتك');
       await browser.waitText('اللغة: العربية');
       stage = 'reload browser and restore session';
@@ -293,7 +328,7 @@ class BrowserProbe {
           File('.local/browser-diagnostic.png')
               .writeAsBytesSync(base64Decode(shot['data'] as String));
           final labels = await browser.evaluate(
-            "(()=>{$dom return all('[role=button], [role=textbox], input, textarea').map(e=>{const r=e.getBoundingClientRect();return {role:e.getAttribute('role'),label:label(e),tag:e.tagName,x:r.x,y:r.y,width:r.width,height:r.height};});})()",
+            "(()=>{$dom return all('[role], [aria-label], input, textarea').map(e=>{const r=e.getBoundingClientRect();return {role:e.getAttribute('role'),label:label(e),tag:e.tagName,x:r.x,y:r.y,width:r.width,height:r.height};});})()",
           );
           File('.local/browser-controls.json')
               .writeAsStringSync(jsonEncode(labels));

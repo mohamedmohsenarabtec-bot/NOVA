@@ -18,7 +18,7 @@
 اختبار الحسابات القائمة دون تعديل كلمات مرورها: مرّر عناوينها الخاصة إلى `scripts/verify_development.dart` مع config/local.json. كلمة المرور تدخل بمتغير عملية مؤقت `NOVA_DEVELOPMENT_PASSWORD` ويُحذف فور انتهاء العملية؛ لا تكتبها في ملف تشغيل محفوظ أو سطر أوامر متشارك. الأداة لا تعيد تعيين الحسابات أو تحذفها. اختبار الإنشاء الافتراضي `scripts/live_smoke.dart` يحذف فقط الحسابات الجديدة التي ينشئها؛ خيار `--retain-development-accounts` يحتفظ بحسابات التطوير ويتطلب كلمة مرور خاصة من البيئة المؤقتة أو إدخال مخفي، ولا يقبل منحها دور موظف.
 
 بناء الويب: `flutter build web --release --base-href=/NOVA/ --dart-define-from-file=config/local.json`.
-بناء Android: `flutter build apk --release --dart-define-from-file=config/local.json`؛ الملف `build/app/outputs/flutter-apk/app-release.apk`. توقيعه الحالي تجريبي، ويلزم إعداد توقيع إصدار خاص قبل Google Play. صفحة GitHub Release ستوفر ملف APK للتنزيل بعد اكتمال التحقق.
+بناء Android: `flutter build apk --release --dart-define-from-file=config/local.json`؛ الملف `build/app/outputs/flutter-apk/app-release.apk`. توقيعه الحالي تجريبي، ويلزم إعداد توقيع إصدار خاص قبل Google Play. التنزيل من GitHub Releases: https://github.com/mohamedmohsenarabtec-bot/NOVA/releases/download/v0.2.0-preview.2/app-release.apk .
 
 أضيف سير عمل `.github/workflows/ios.yml` للبناء على macOS دون توقيع. نجاحه، إن اكتمل، يثبت البناء فقط؛ لا يثبت تشغيل جهاز حقيقي أو إصدار App Store. ما يزال النشر على App Store يتطلب حساب Apple وشهادات وتوفيرًا وإعداد المتجر.
 

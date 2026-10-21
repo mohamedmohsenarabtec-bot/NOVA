@@ -1,4 +1,6 @@
 // Test fixtures only; never included in the app or database seed.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -15,7 +17,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class TestRepository extends NovaRepository {
   TestRepository()
-    : super(SupabaseClient('https://test.invalid', 'test-public-key'));
+    : super(
+        SupabaseClient(
+          'https://test.invalid',
+          'test-public-key',
+          authOptions: const AuthClientOptions(autoRefreshToken: false),
+        ),
+      );
   final saved = <DbRow>[];
   final sent = <String>[];
   bool showProfile = false;
@@ -61,6 +69,26 @@ class TestRepository extends NovaRepository {
   Future<List<DbRow>> queue() async => [];
 }
 
+class RacingRepository extends TestRepository {
+  final requests = <Completer<List<DbRow>>>[];
+  void Function()? connected;
+  @override
+  Future<List<DbRow>> messages(String id, {DateTime? before}) {
+    final request = Completer<List<DbRow>>();
+    requests.add(request);
+    return request.future;
+  }
+
+  @override
+  Future<RealtimeChannel?> watchMessages(
+    String id,
+    void Function() changed,
+  ) async {
+    connected = changed;
+    return null;
+  }
+}
+
 late NovaPreferences preferences;
 Widget host(Widget child) => PreferencesScope(
   preferences: preferences,
@@ -68,12 +96,39 @@ Widget host(Widget child) => PreferencesScope(
 );
 void main() {
   late TestRepository repo;
+  late RacingRepository racing;
   setUp(() async {
     repo = TestRepository();
+    racing = RacingRepository();
     SharedPreferences.setMockInitialValues({'nova.locale': 'en'});
     preferences = NovaPreferences(await SharedPreferences.getInstance());
   });
-  tearDown(() => repo.client.dispose());
+  tearDown(() async {
+    await repo.client.dispose();
+    await racing.client.dispose();
+  });
+  testWidgets(
+    'late initial history cannot overwrite messages caught up after realtime connects',
+    (tester) async {
+      await tester.pumpWidget(
+        host(ChatScreen(repo: racing, conversationId: 'fixture-chat')),
+      );
+      await tester.pump();
+      racing.connected!();
+      racing.requests[1].complete([
+        {
+          'id': 'new-message',
+          'sender_id': 'test-user',
+          'body': 'Fresh message',
+          'created_at': '2026-10-21T10:00:00Z',
+        },
+      ]);
+      await tester.pumpAndSettle();
+      racing.requests.first.complete([]);
+      await tester.pumpAndSettle();
+      expect(find.text('Fresh message'), findsOneWidget);
+    },
+  );
   testWidgets(
     'password change validates confirmation before any Auth request',
     (tester) async {

@@ -7,6 +7,7 @@ abstract final class NovaTheme {
       brightness: brightness,
     );
     return ThemeData(
+      fontFamily: 'NovaArabic',
       useMaterial3: true,
       colorScheme: colors,
       scaffoldBackgroundColor: colors.surface,

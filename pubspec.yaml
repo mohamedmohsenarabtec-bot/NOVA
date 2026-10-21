@@ -20,3 +20,7 @@ dev_dependencies:
   supabase: 2.16.5
 flutter:
   uses-material-design: true
+  fonts:
+    - family: NovaArabic
+      fonts:
+        - asset: assets/fonts/NotoSansArabic.ttf

@@ -75,14 +75,16 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   final composer = TextEditingController();
   final rows = <DbRow>[];
   RealtimeChannel? channel;
   bool loading = true, failed = false, sending = false, more = true;
+  int loadGeneration = 0;
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     load();
     unawaited(connect());
   }
@@ -104,6 +106,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> load({bool older = false}) async {
+    final generation = ++loadGeneration;
     try {
       final result = await widget.repo.messages(
         widget.conversationId,
@@ -111,7 +114,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ? DateTime.parse(rows.last['created_at'])
             : null,
       );
-      if (!mounted) return;
+      if (!mounted || generation != loadGeneration) return;
       setState(() {
         if (!older) rows.clear();
         rows.addAll(result.where((r) => !rows.any((e) => e['id'] == r['id'])));
@@ -120,7 +123,7 @@ class _ChatScreenState extends State<ChatScreen> {
         failed = false;
       });
     } catch (_) {
-      if (mounted) {
+      if (mounted && generation == loadGeneration) {
         setState(() {
           failed = true;
           loading = false;
@@ -130,7 +133,13 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) unawaited(load());
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     composer.dispose();
     if (channel != null) unawaited(widget.repo.client.removeChannel(channel!));
     super.dispose();
