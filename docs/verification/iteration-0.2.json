@@ -1,0 +1,80 @@
+{
+    "verified_utc":  "2026-10-21T15:52:39.9947861Z",
+    "application_source":  "dfc41370d9af15837c9b865fc84ca4f8b82d43d3",
+    "local":  {
+                  "flutter_tests":  26,
+                  "web_release":  "PASS",
+                  "android_release":  "PASS",
+                  "android_signing":  "existing development identity",
+                  "analyze":  "PASS",
+                  "physical_mobile_devices":  "INCOMPLETE",
+                  "format":  "PASS"
+              },
+    "backend":  {
+                    "verified_utc":  "2026-10-21T15:49:22.045731Z",
+                    "results":  [
+                                    {
+                                        "flow":  "both existing accounts have persisted distinct profiles and no staff roles",
+                                        "status":  "PASS"
+                                    },
+                                    {
+                                        "flow":  "persistent realtime message delivered to participant 1",
+                                        "status":  "PASS"
+                                    },
+                                    {
+                                        "flow":  "persistent realtime message delivered to participant 2",
+                                        "status":  "PASS"
+                                    },
+                                    {
+                                        "flow":  "real Auth password update works and original development password is restored",
+                                        "status":  "PASS"
+                                    },
+                                    {
+                                        "flow":  "both accounts can logout and login again",
+                                        "status":  "PASS"
+                                    }
+                                ]
+                },
+    "browser":  {
+                    "verified_utc":  "2026-10-21T15:51:42.418281Z",
+                    "published_browser":  "PASS"
+                },
+    "owner":  {
+                  "verified_utc":  "2026-10-21T15:51:38.998880Z",
+                  "identity":  "PASS",
+                  "administrator":  "PASS",
+                  "moderation":  "PASS",
+                  "client_cannot_assign_roles":  "PASS",
+                  "published_admin_ui":  "PASS"
+              },
+    "ci":  {
+               "ios_status":  "INCOMPLETE - queued, no macOS runner assigned",
+               "pages_run":  39629020501,
+               "ios_run":  39629020519,
+               "database_tests":  31,
+               "pages_status":  "PASS",
+               "status":  "PASS",
+               "flutter_and_database_run":  39629020838
+           },
+    "apk":  {
+                "published_download_matches_local":  true,
+                "url":  "https://github.com/mohamedmohsenarabtec-bot/NOVA/releases/download/v0.2.0-preview.2/app-release.apk",
+                "local_path":  "build/app/outputs/flutter-apk/app-release.apk",
+                "bytes":  59216657,
+                "sha256":  "F567FB94BAA416B31420E36BE8378B0B9C7DFECBBB55E41FBDB13181AC8694F7"
+            },
+    "security":  {
+                     "owner_bootstrap":  "reviewed Auth UUID via authorized DB transaction",
+                     "source_secret_scan":  "PASS - excludes only synthetic rejected-key fixture",
+                     "test_users_have_staff_roles":  false,
+                     "web_and_apk_credential_scan":  "PASS",
+                     "test_accounts_retained":  true,
+                     "owner_credentials":  "ignored local file only",
+                     "public_backend_config":  "existing NOVA publishable key only"
+                 },
+    "notes":  [
+                  "Initial immediate-after-SUBSCRIBED test attempts missed events. Final probes wait for actual postgres_changes system readiness and passed both directions. App catches up on readiness/reconnect/resume.",
+                  "Browser probes required focus/keyboard activation for checked popup semantics; latest deployed UI acceptance passed.",
+                  "No signed iOS build or physical device validation has been performed."
+              ]
+}
