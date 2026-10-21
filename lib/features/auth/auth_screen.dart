@@ -5,6 +5,7 @@ import '../../core/config.dart';
 import '../../core/strings.dart';
 import '../../core/validation.dart';
 import '../../shared/repository.dart';
+import 'auth_feedback.dart';
 
 class AuthScreen extends StatefulWidget {
   final NovaRepository repo;
@@ -38,6 +39,24 @@ class _AuthScreenState extends State<AuthScreen> {
 
   Future<void> submit({bool reset = false}) async {
     final s = Strings.of(context);
+    if (reset && !Config.emailRecoveryEnabled) {
+      setState(
+        () => notice = s.t(
+          'استعادة كلمة المرور بالبريد غير مفعّلة في هذه التجربة. لن نرسل رسالة. يلزم إعداد إرسال البريد قبل تفعيلها.',
+          'Email password recovery is not enabled for this preview. No email was sent. Configure email delivery before enabling recovery.',
+        ),
+      );
+      return;
+    }
+    if (reset && !Validation.email(email.text)) {
+      setState(
+        () => notice = s.t(
+          'أدخل بريدًا صالحًا أولًا.',
+          'Enter a valid email first.',
+        ),
+      );
+      return;
+    }
     if (reset
         ? !Validation.email(email.text)
         : !form.currentState!.validate()) {
@@ -64,8 +83,8 @@ class _AuthScreenState extends State<AuthScreen> {
       if (reset) {
         await widget.repo.client.auth.resetPasswordForEmail(email.text.trim());
         notice = s.t(
-          'إذا كان البريد مسجلًا فستصلك رسالة لاستعادة الحساب.',
-          'If registered, you will receive a recovery email.',
+          'إذا كان الحساب مؤهلًا فقد طُلبت رسالة استعادة. وصولها يعتمد على إعداد البريد.',
+          'If eligible, a recovery email was requested. Delivery depends on email configuration.',
         );
       } else if (widget.recovery) {
         await widget.repo.client.auth.updateUser(
@@ -73,29 +92,20 @@ class _AuthScreenState extends State<AuthScreen> {
         );
         widget.onRecovered();
       } else if (register) {
-        await widget.repo.client.auth.signUp(
+        final result = await widget.repo.register(
           email: email.text.trim(),
           password: password.text,
-          data: {
-            'birth_date': birth!.toIso8601String().substring(0, 10),
-            'consent_version': 'draft-v1',
-          },
+          birth: birth!,
         );
-        notice = s.t(
-          'تحقق من بريدك الإلكتروني لتفعيل حسابك.',
-          'Check your email to verify your account.',
-        );
+        notice = signupFeedback(s, result);
       } else {
         await widget.repo.client.auth.signInWithPassword(
           email: email.text.trim(),
           password: password.text,
         );
       }
-    } catch (_) {
-      notice = s.t(
-        'تعذر إتمام الطلب. تحقق من البيانات وتفعيل البريد أو حاول لاحقًا.',
-        'Could not complete request. Check credentials, email verification, or try later.',
-      );
+    } catch (error) {
+      notice = authFeedback(s, error);
     }
     if (mounted) setState(() => busy = false);
   }

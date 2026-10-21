@@ -1,60 +1,115 @@
-# التشغيل والإعداد والنشر
+﻿# الإعداد والنشر — مشروع NOVA الموجود
 
-هذه نسخة تطوير، وليست منتجًا جاهزًا للنشر العام. يمكن فتح الواجهة دون حسابات خارجية، لكن التسجيل والبيانات يتطلبان Supabase فعليًا.
+لا تنشئ مشروع Supabase جديدًا، ولا تستخدم reset أو أوامر إسقاط الجداول على مشروع المالك. ملفات الحسابات والإعدادات المحلية والأدوات المحمولة مستبعدة من Git.
 
-## على جهازك الحالي
+## ما تم التحقق منه
 
-Flutter موجود في `C:\src\flutter\bin` لكنه غير مضاف إلى PATH. من PowerShell داخل المشروع:
+المشروع `zywftgogopjdqjdceqzd` يستجيب لطلبات Auth بالمفتاح العام. التسجيل بالبريد مفعّل وتأكيد البريد معطّل فعلًا. لم يُغير هذا التنفيذ إعدادًا أمنيًا بعيدًا. آخر حالة فحص الجاهزية في `docs/verification/backend-connection.json`؛ المخطط غير جاهز ما لم يُرجع client_readiness الإصدار 4.
+
+## تفويض إدارة Supabase دون إرسال أسرار
+
+في VS Code اختر Terminal ثم New Terminal داخل مجلد NOVA وشغّل:
+
+```powershell
+.\.tools\supabase\supabase.exe --agent no --output-format text login
+```
+
+اضغط Enter لفتح المتصفح. سجّل الدخول إلى حساب المشروع، ثم انسخ رمز التحقق من الموقع إلى الطرفية نفسها. لا ترسله في المحادثة. الأمر الرسمي يحفظ جلسة CLI خارج المستودع. يمكن بدل ذلك ربط إضافة Supabase وتفويض المشروع منها. لا نحتاج كلمة مرور قاعدة البيانات أو service-role أو رمز وصول خاص في المحادثة.
+
+بعد التفويض تحقق:
+
+```powershell
+.\.tools\supabase\supabase.exe projects list
+```
+
+ثم افحص مخطط المشروع قراءة فقط:
+
+```powershell
+.\.tools\supabase\supabase.exe db query --project-ref zywftgogopjdqjdceqzd --file supabase/inspect_remote.sql
+```
+
+CLI الحالي يدعم الاستعلام عبر Management API. نتائج الفحص لا تتضمن كلمات مرور أو نصوص رسائل. إذا وجدت جداول متعارضة أو مخططًا غير معروف، لا تطبّق الترحيلات فوقه. افحص تاريخ الترحيلات والمخطط والبيانات دون حذفها. جدول profiles الغائب في API لا يثبت أن بقية القاعدة فارغة.
+
+إذا أثبت الفحص أن قاعدة التطبيق جديدة ولا توجد تعارضات، اربط المشروع الموجود، ثم استخدم dry run قبل التطبيق:
+
+```powershell
+.\.tools\supabase\supabase.exe link --project-ref zywftgogopjdqjdceqzd
+.\.tools\supabase\supabase.exe db push --dry-run --skip-vault
+.\.tools\supabase\supabase.exe db push --skip-vault
+.\.tools\supabase\supabase.exe db query --project-ref zywftgogopjdqjdceqzd --file supabase/verify_remote.sql
+```
+
+إذا طلبت الأداة كلمة مرور قاعدة، لا ترسلها في المحادثة. توقّف واستخدم اتصال Supabase المفوض أو مسار Management API المدعوم بدلًا من طلب أسرار. لا تُعدّل سجل الترحيلات أو تُعلّم ملفات مطبقة دون دليل تنفيذ.
+
+## تجربة التسجيل دون شراء SMTP
+
+المسار الحالي في لوحة Supabase: **Authentication → Sign In / Providers → Email → Confirm email**. في مشروع التطوير فقط اترك Confirm email معطّلًا. الفحص الحالي يؤكد أنه معطّل بالفعل، فلا تغيّر شيئًا دون حاجة. تشرح [وثائق Supabase الرسمية](https://supabase.com/docs/guides/auth/general-configuration) أن هذا الإعداد يؤكد البريد ضمنيًا عند إنشاء الحساب؛ لذلك لا نزيل شرط الحساب المؤكد من سياسات الخادم.
+
+لا تعطّل CAPTCHA أو حدود التسجيل تلقائيًا. إذا ظهر تحدي أمني فإكمال تكامله مطلوب بدل تجاوزه. لا تفعّل التسجيل المجهول. الإعداد المحلي `supabase/config.toml` يخص البيئة المحلية؛ لا يُغيّر إعداد المشروع المستضاف من تلقاء نفسه.
+
+استعادة كلمة المرور ليست جزءًا من رحلة الاختبار الأساسية ولا تعد بإرسال بريد. تفعيلها لاحقًا يحتاج إرسالًا فعليًا وروابط عودة مختبرة. قبل إطلاق الجمهور أعد تقييم تأكيد البريد، وفعّل سياسة 12 حرفًا أو أكثر من إعداد Auth، وراجع SMTP والحماية.
+
+## تشغيل الويب المحلي
+
+`config/local.json` أُنشئ من البيانات العامة المقدمة. التطبيق يستخدم `--dart-define-from-file` ولا يقرأ .env تلقائيًا:
 
 ```powershell
 .\scripts\run.ps1
 ```
 
-يفتح Chrome على المنفذ 3000. إذا منعت سياسة Windows تشغيل السكربت، استخدم الأمر المباشر:
+الواجهة على المنفذ 3000. الروابط تستخدم hash، مثل `/#/admin` و`/#/chat/...`، لذلك تعمل إعادة تحميل المسار على استضافة ثابتة. لا تفتح build/web/index.html مباشرة من القرص.
+
+## GitHub وGitHub Pages
+
+ثُبتت أداة GitHub الرسمية محليًا في `.tools/github/bin/gh.exe`. سجّل المالك الدخول بنجاح إلى `mohamedmohsenarabtec-bot`. المستودع الخاص الذي أُنشئ هو:
+
+https://github.com/mohamedmohsenarabtec-bot/NOVA
+
+لإعادة التفويض عند الحاجة، استخدم الأمر الرسمي في الطرفية:
 
 ```powershell
-& 'C:\src\flutter\bin\flutter.bat' run -d chrome --web-port 3000
+.\.tools\github\bin\gh.exe auth login
+.\.tools\github\bin\gh.exe auth status
 ```
 
-للاتصال بالخدمة، انسخ `config/local.example.json` إلى `config/local.json` وأدخل عنوان مشروع Supabase ومفتاحه **العام** فقط. ثم:
+لا ترسل كلمة مرور أو personal access token. رمز ربط الجهاز مؤقت وليس كلمة مرور GitHub. توثيق الأداة: https://cli.github.com/manual/gh_auth_login .
+
+Workflow النشر هو `.github/workflows/pages.yml`: تثبيت Flutter المتوافق، فحص التنسيق والتحليل والاختبارات، إنشاء إعداد عام من Actions variables، بناء release بالمسار الذي تعيده configure-pages، ثم upload-pages-artifact وdeploy-pages بصلاحيات النشر اللازمة فقط.
+
+داخل المستودع: **Settings → Secrets and variables → Actions → Variables**. المتغيرات المطلوبة هي `SUPABASE_URL` و`SUPABASE_PUBLISHABLE_KEY`، و`APP_NAME` اختياري. يجب أن يحتوي المفتاح على publishable أو anon فقط، وليس service-role. يُرفض المفتاح الخاص قبل البناء ولا تُطبع قيمته. يمكن للأداة ضبط المتغيرات تلقائيًا من ملف المالك المحلي بعد التفويض.
+
+في **Settings → Pages → Build and deployment → Source** اختر **GitHub Actions**، أو استخدم API المفوض إذا كان الحساب يدعم ذلك. المستودع الخاص يحتاج خطة GitHub تدعم Pages الخاصة. إذا رفض GitHub ذلك، لا تحوّل المستودع إلى عام تلقائيًا: يلزم اختيار المالك بعد توضيح أن المصدر سيصبح عامًا. [متطلبات Pages الرسمية](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
+
+لا يوجد رابط تطبيق مؤكد حتى ينجح workflow ويُسترجع page_url الحقيقي من GitHub. عنوان المستودع يعرض المصدر، وليس التطبيق. GitHub Pages يستضيف عميل Flutter الثابت؛ Supabase يظل مسؤولًا عن Auth وقاعدة البيانات والصلاحيات.
+
+بعد نجاح النشر اضبط Supabase Site URL على أصل ومعرّف مسار Pages الفعلي، وأضف رابط العودة المطلوب بدقة. للويب المحلي استخدم http://localhost:3000. استعادة البريد غير مفعلة هنا. لا نحتاج روابط بريد لتجربة التسجيل الفوري.
+
+## الاختبارات الحية
+
+فحص الاتصال الآمن:
 
 ```powershell
-& 'C:\src\flutter\bin\flutter.bat' run -d chrome --web-port 3000 --dart-define-from-file=config/local.json
+& 'C:\src\flutter\bin\cache\dart-sdk\bin\dart.exe' run scripts/check_backend.dart config/local.json
 ```
 
-## إعداد Supabase
+بعد الترحيل وباستخدام عنوانين جديدين يملكهما المالك:
 
-1. أنشئ مشروع تطوير جديدًا في حساب Supabase. احتفظ بكلمة مرور قاعدة البيانات خارج المشروع.
-2. ثبّت Supabase CLI بالطريقة الرسمية لجهازك. أدوات CLI وDocker غير متاحة حاليًا في PATH على هذا الجهاز.
-3. محليًا، بعد تثبيت Docker وتشغيله: `supabase start` ثم `supabase db reset` ثم `supabase test db`. إعادة الضبط تحذف البيانات المحلية؛ لا تستخدمها على الإنتاج.
-4. بعد نجاح الاختبارات محليًا، اربط مشروع التطوير: `supabase login` ثم `supabase link --project-ref YOUR_REF` ثم `supabase db push`. تنطبق الملفات الثلاثة داخل migrations بالترتيب. لا تربط إنتاجًا قبل مراجعة التغييرات والنسخ الاحتياطي.
-5. في Auth فعّل تأكيد البريد، عطّل التسجيل المجهول، واضبط كلمة المرور إلى 12 حرفًا على الأقل. اضبط SMTP للإرسال الفعلي وحماية CAPTCHA وحدود التسجيل.
-6. للويب المحلي: Site URL هو `http://localhost:3000`. أضف روابط العودة المطلوبة لهذا الأصل. للاستضافة أضف عنوان HTTPS الصحيح فقط.
-7. للمحمول أضف `com.nova.app.nova://login-callback/` إلى قائمة Redirect URLs. مخطط الرابط مسجل في Android وiOS؛ اختبر التأكيد والاستعادة على أجهزة فعلية. غيّر المعرف المؤقت والمخطط قبل الإطلاق، ويفضل روابط تطبيق موثقة بنطاقك.
-8. أنشئ حساب المالك، أكّد البريد، ثم عيّن دوره من SQL Editor حسب `docs/moderation.md`.
+```text
+dart run scripts/live_smoke.dart config/local.json OWNER_EMAIL+nova1@example.com OWNER_EMAIL+nova2@example.com --verify-moderation
+```
 
-التطبيق لا يقرأ `.env` تلقائيًا؛ ملف `.env.example` يوضح أسماء الإعدادات. مصدر إعداد البناء هو JSON عبر `--dart-define-from-file`. ملفات البيئات الحقيقية مستبعدة من Git. لا تستخدم service-role في إعداد Flutter مطلقًا.
+العناوين السابقة أمثلة فقط؛ لا تُستخدم بدل عناوين المالك. يولّد السكربت كلمات مرور في الذاكرة، ويختبر الحسابين والصلاحيات، ويستخدم جلسة CLI لتعيين وإلغاء دور moderator لحساب الاختبار فقط عند طلب ذلك. يحذف فقط الحسابات التي أنشأها هذا التشغيل في finally. لا يغير الحسابات الموجودة أو يحاول إعادة تعيين كلمات مرورها. النتائج محلية في `.local/live-results.json` دون كلمات مرور أو رموز جلسات. نتائج API لا تثبت إعادة تحميل المتصفح أو التسليم عبر Realtime؛ يلزم اختبارهما بمتصفح فعلي.
 
-## الويب
+لـpgTAP استخدم `supabase test db` على بيئة محلية معزولة أو وظيفة CI database، وليس reset على المشروع البعيد. هذه الاختبارات داخل transaction وتتراجع في النهاية. أي اختبار غير منفذ يسجل NOT TESTED.
+
+## Android وiOS
+
+للتجربة: `scripts/run.ps1 -Target android`. بناء debug:
 
 ```powershell
-& 'C:\src\flutter\bin\flutter.bat' build web --release --dart-define-from-file=config/production.json
+& 'C:\src\flutter\bin\flutter.bat' build apk --debug --dart-define-from-file=config/local.json
 ```
 
-ارفع محتويات `build/web` إلى استضافة ملفات ثابتة مع HTTPS. لا تفتح index.html مباشرة من القرص. اختبر مسارات `/#/admin` و`/#/chat/...`، واستعادة كلمة المرور، وسياسة CSP المناسبة لبناء Flutter. بوابة المشرف حاليًا مسار محمي داخل التطبيق نفسه؛ الاستضافة المنفصلة لم تُنفذ.
+الملف في `build/app/outputs/flutter-apk/app-debug.apk` وليس إصدار متجر. قبل الإطلاق اختر معرف حزمة واسمًا وأيقونة تملكها واضبط release signing؛ إعداد Gradle الحالي يستخدم توقيع debug حتى لإعداد release. لا ترفعه للمتجر بهذا التوقيع.
 
-## Android
-
-للتجربة شغّل محاكيًا أو صِل هاتفًا مع USB debugging، ثم `scripts/run.ps1 -Target android`. ملف APK التجريبي، عند نجاح البناء، في `build/app/outputs/flutter-apk/app-debug.apk`. ليس ملف نشر.
-
-قبل المتجر: اختر applicationId تملكه بدل `com.nova.app.nova`، وحدّث الاسم والأيقونة وروابط العودة، وأنشئ مفتاح توقيع إصدار محفوظًا بأمان خارج Git. قالب Gradle الحالي يستخدم توقيع debug حتى لإعداد release؛ يجب استبداله قبل إصدار المتجر. بعد إعداد التوقيع: `flutter build appbundle --release --dart-define-from-file=config/production.json`. أكمل إفصاحات البيانات والتصنيف العمري وسياسات الحساب/الاشتراكات.
-
-تعطيل Kotlin incremental compilation يعالج مشكلة مراجع cache عبر القرصين C وD في هذه البيئة. يمكن إعادة تقييمه على CI ذي القرص الواحد بعد التحقق.
-
-## iOS
-
-يتطلب Mac مع Xcode وCocoaPods عند الحاجة وحساب Apple Developer. افتح `ios/Runner.xcworkspace` واضبط Bundle ID وTeam والتوقيع. ثم على Mac: `flutter pub get` و`flutter analyze` و`flutter test` و`flutter build ipa --release --dart-define-from-file=config/production.json`. لا يمكن بناء أو التحقق من iOS من Windows الحالي. اختبر Deep links واستعادة الحساب على جهاز حقيقي.
-
-## الاسم والبيئات
-
-`APP_NAME` يغيّر اسم التطبيق داخل Flutter. أسماء المشغّل واسم الويب والأيقونات ومعرفات الحزم ملفات منصة مستقلة وتحتاج إعادة تسمية عند تثبيت العلامة. لا يوجد فحص قانوني لتوفر اسم NOVA أو نطاقه. استخدم مشاريع Supabase مستقلة للتطوير والتجهيز والإنتاج وملفات JSON مستقلة محلية لكل منها.
+iOS يتطلب Mac وXcode وحساب Apple Developer وضبط Team/Bundle ID والتوقيع، ثم flutter build ipa. لا يمكن اختباره من Windows الحالي. الصور والصوت وFCM والدفع ما زالت غير مكتملة، ولا يُعد نجاح نشر الويب إثباتًا لجهوزية تجارية.

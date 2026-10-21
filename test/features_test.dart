@@ -91,6 +91,26 @@ void main() {
     expect(repo.saved.single['onboarding_step'], 1);
     expect(find.text('Who would you like to meet?'), findsOneWidget);
   });
+  testWidgets(
+    'preview recovery explains missing delivery without an email request',
+    (tester) async {
+      await tester.pumpWidget(
+        host(
+          AuthScreen(
+            repo: repo,
+            languageButton: const SizedBox(),
+            recovery: false,
+            onRecovered: () {},
+          ),
+        ),
+      );
+      await tester.ensureVisible(find.text('Forgot password?'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Forgot password?'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('No email was sent'), findsOneWidget);
+    },
+  );
   testWidgets('discovery honest empty state', (tester) async {
     await tester.pumpWidget(host(DiscoverScreen(repo: repo)));
     await tester.pumpAndSettle();

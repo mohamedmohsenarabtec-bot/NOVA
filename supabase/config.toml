@@ -21,5 +21,6 @@ additional_redirect_urls = ["http://localhost:3000/**"]
 minimum_password_length = 12
 [auth.email]
 enable_signup = true
-enable_confirmations = true
+# Local development only. Hosted Auth settings are separate and must be inspected.
+enable_confirmations = false
 double_confirm_changes = true

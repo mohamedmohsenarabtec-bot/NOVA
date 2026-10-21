@@ -14,6 +14,16 @@ Future<void> main() async {
         publishableKey: Config.key,
         debug: false,
       );
+      final schemaVersion = await Supabase.instance.client.rpc(
+        'client_readiness',
+      );
+      if (schemaVersion != 4) {
+        startupError = 'يلزم تحديث قاعدة البيانات قبل التسجيل / Database migrations required before signup';
+      }
+    } on PostgrestException catch (error) {
+      startupError = error.code == 'PGRST202'
+          ? 'الاتصال بالمشروع يعمل، لكن يلزم تطبيق ترحيلات NOVA أولًا / Project reachable; apply NOVA database migrations first'
+          : 'تعذر التحقق من جاهزية قاعدة البيانات / Could not verify database readiness';
     } catch (_) {
       startupError = 'تعذر بدء الاتصال بالخدمة / Could not initialize backend';
     }

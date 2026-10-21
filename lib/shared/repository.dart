@@ -1,11 +1,33 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../features/auth/auth_feedback.dart';
+
 typedef DbRow = Map<String, dynamic>;
 
 class NovaRepository {
   final SupabaseClient client;
   NovaRepository(this.client);
   String get uid => client.auth.currentUser!.id;
+  Future<SignupResult> register({
+    required String email,
+    required String password,
+    required DateTime birth,
+  }) async {
+    final response = await client.auth.signUp(
+      email: email.trim(),
+      password: password,
+      data: {
+        'birth_date': birth.toIso8601String().substring(0, 10),
+        'consent_version': 'draft-v1',
+      },
+    );
+    if (response.session != null) return SignupResult.signedIn;
+    if (response.user?.identities?.isEmpty == true) {
+      return SignupResult.alreadyRegistered;
+    }
+    return SignupResult.confirmationRequired;
+  }
+
   Future<DbRow?> profile() =>
       client.from('profiles').select().eq('id', uid).maybeSingle();
   Future<List<DbRow>> discover({int page = 0}) async => List<DbRow>.from(

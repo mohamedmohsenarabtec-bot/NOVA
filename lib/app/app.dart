@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/config.dart';
 import '../core/strings.dart';
 import '../features/auth/auth_screen.dart';
+import '../features/auth/auth_feedback.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/discover/discover_screen.dart';
 import '../features/chat/chat_screen.dart';
@@ -160,16 +161,25 @@ class _SessionGateState extends State<SessionGate> {
   void initState() {
     super.initState();
     refresh();
-    subscription = repo.client.auth.onAuthStateChange.listen((state) {
-      if (mounted) {
-        setState(() {
-          recovery =
-              state.event == AuthChangeEvent.passwordRecovery ||
-              (recovery && state.event != AuthChangeEvent.signedOut);
-          refresh();
-        });
-      }
-    });
+    subscription = repo.client.auth.onAuthStateChange.listen(
+      (state) {
+        if (mounted) {
+          setState(() {
+            recovery =
+                state.event == AuthChangeEvent.passwordRecovery ||
+                (recovery && state.event != AuthChangeEvent.signedOut);
+            refresh();
+          });
+        }
+      },
+      onError: (Object error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(authFeedback(Strings.of(context), error))),
+          );
+        }
+      },
+    );
   }
 
   void refresh() {

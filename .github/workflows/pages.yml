@@ -1,0 +1,73 @@
+name: Deploy NOVA web preview
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.7'
+          channel: stable
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      - run: dart format --output=none --set-exit-if-changed .
+      - run: flutter analyze
+      - run: flutter test
+      - name: Read Pages configuration
+        id: pages
+        uses: actions/configure-pages@v5
+      - name: Prepare public client configuration
+        env:
+          NOVA_URL: ${{ vars.SUPABASE_URL }}
+          NOVA_PUBLIC_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+          NOVA_NAME: ${{ vars.APP_NAME }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib
+          if not os.environ.get('NOVA_URL') or not os.environ.get('NOVA_PUBLIC_KEY'):
+              raise SystemExit('Set repository Actions variables SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY first.')
+          pathlib.Path('.local').mkdir(exist_ok=True)
+          pathlib.Path('.local/pages.json').write_text(json.dumps({
+              'APP_NAME': os.environ.get('NOVA_NAME') or 'NOVA',
+              'SUPABASE_URL': os.environ['NOVA_URL'],
+              'SUPABASE_PUBLISHABLE_KEY': os.environ['NOVA_PUBLIC_KEY'],
+              'AUTH_EMAIL_RECOVERY_ENABLED': 'false'
+          }), encoding='utf-8')
+          PY
+          dart run scripts/validate_client_config.dart .local/pages.json
+      - name: Build Flutter for repository path
+        env:
+          PAGES_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+        run: flutter build web --release --base-href="${PAGES_BASE_PATH%/}/" --dart-define-from-file=.local/pages.json
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: build/web
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy preview
+        id: deployment
+        uses: actions/deploy-pages@v4

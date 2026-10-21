@@ -1,4 +1,23 @@
-# NOVA build status — 2026-10-21 (Africa/Cairo)
+# NOVA continuation status — 2026-10-21 (Africa/Cairo)
+
+## Current work: existing Supabase project + GitHub preview
+
+- Existing project: `zywftgogopjdqjdceqzd`; public client configuration saved in ignored `config/local.json`. No second project created.
+- **VERIFIED**: actual Auth endpoint responds, email/password is enabled, signup enabled, and email autoconfirm already enabled. No remote Auth settings, CAPTCHA or rate protections were changed. Paid SMTP is unnecessary for immediate development signup under these existing settings.
+- **NOT APPLIED**: project profile API reports PGRST205 and the new schema-readiness probe reports PGRST202. This is not proof of an empty database. Privileged schema inspection is still required before any migration. No remote tables, accounts or data were deleted or reset.
+- Four migrations are prepared. New `202610210004_client_readiness.sql` exposes only a public schema-version integer. Startup checks it before showing registration, preventing accounts without the required application schema.
+- Auth UI now handles immediate signup sessions correctly, distinguishes duplicate/invalid/rate-limited requests, catches auth-stream errors, and clearly explains disabled email recovery. No reset email is promised. Public configuration rejects secret/service-role keys and incorrect API subpaths.
+- **VERIFIED**: original baseline analysis and 15 tests passed. Updated suite: **21 tests passed**. Whole-project formatting and static analysis passed. A configured web build under `/NOVA/` passed before the final readiness addition; final builds are pending.
+- Official portable GitHub CLI 2.102.1 and Supabase CLI 2.121.0 downloaded from their official GitHub releases into ignored `.tools/`.
+- Git initialized and a local checkpoint created before significant code changes. Official GitHub browser login succeeded as `mohamedmohsenarabtec-bot`.
+- **CREATED**: private repository https://github.com/mohamedmohsenarabtec-bot/NOVA . Public Actions variables `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and `APP_NAME` are set. Source push and remote CI verification are pending.
+- Pages workflow prepared with formatting, analysis, tests, dynamic project base path, public-key validation and official artifact/deploy actions. **NO DEPLOYED URL YET**. Private repository Pages eligibility has not been established; no repository visibility was changed.
+- `scripts/live_smoke.dart` prepared for owner-controlled test addresses, ephemeral in-memory passwords, ordinary-key product operations and optional temporary test-only moderator validation. It deletes only accounts created by that run and never modifies preexisting identities. **NOT RUN** pending migrations and owner authorization. API persistence checks explicitly do not claim browser reload or Realtime delivery verification.
+- Database pgTAP suite now has **31 checks**, still NOT RUN. Read-only schema inspection and verification SQL prepared. Live signup/login/matching/chat/block/report and unauthorized-access flows remain **NOT TESTED**, rather than assumed successful from widget fixtures.
+
+Required external action currently pending: complete official Supabase CLI browser login (or connect the Supabase plugin). No database password, privileged key, access token or GitHub password is needed in chat.
+
+## Original scaffold record (historical; current status above takes precedence)
 
 **Development MVP foundation; NOT production-ready or a complete implementation of the requested product. No external backend connection has been demonstrated.**
 

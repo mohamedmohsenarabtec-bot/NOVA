@@ -1,0 +1,12 @@
+{
+  "checked_utc": "2026-10-21T13:48:34.922882Z",
+  "project_host": "zywftgogopjdqjdceqzd.supabase.co",
+  "auth_reachable": true,
+  "email_enabled": true,
+  "email_confirmation_disabled": true,
+  "signup_disabled": false,
+  "nova_schema_ready": false,
+  "schema_probe_http": 404,
+  "schema_probe_code": "PGRST202",
+  "flows": "NOT TESTED: no accounts or data are created by this read-only check"
+}
