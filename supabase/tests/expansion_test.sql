@@ -74,6 +74,7 @@ select is((select count(*)::int from public.messages),0,'unmatched conversation 
 reset role;
 select is((select count(*)::int from public.messages),1,'unmatch preserves history on server');
 -- Premium visibility is based on expiring server entitlements, not a client flag.
+update public.profiles set visible=true where id='00000000-0000-0000-0000-000000000101';
 insert into public.entitlements(user_id,feature,expires_at) values('00000000-0000-0000-0000-000000000104','premium',now()+interval '1 day');
 set local role authenticated;
 set local request.jwt.claim.sub='00000000-0000-0000-0000-000000000101';
