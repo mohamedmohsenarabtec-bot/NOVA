@@ -1,8 +1,8 @@
-﻿# Changelog
+# Changelog
 
-## 0.3.0+3 — 2026-10-22
+## 0.3.0+4 — 2026-10-22
 
-- Render Flutter before backend startup; bounded initialization and actionable Retry.
+- Fix release R8/JNI Kotlin interop lookups; render Flutter before initialization, preserve web deep links and provide bounded Retry.
 - Persist expanded profiles, field privacy, ordered real photo uploads and authenticated per-request image delivery.
 - Add saved discovery filters, private favorites, explicit pending-like expiration and unmatch without conversation deletion.
 - Add real liked-you authorization, participant chat summaries/read acknowledgement and persistent in-app notifications.

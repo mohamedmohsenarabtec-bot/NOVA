@@ -12,7 +12,6 @@ import 'package:image/image.dart' as image;
 import 'package:supabase/supabase.dart';
 import 'package:nova/core/config.dart';
 import 'package:nova/core/photo_processing.dart';
-import 'package:nova/shared/repository.dart';
 
 import 'live_smoke.dart' show Api, TestAccount, require;
 import 'browser_probe.dart';
@@ -385,14 +384,22 @@ Future<void> main(List<String> args) async {
             email: a.email,
             password: a.password,
           );
-          final repository = NovaRepository(live);
-          final orderedPhotos = await repository.photos();
+          final orderedPhotos = await live
+              .from('profile_photos')
+              .select()
+              .eq('owner_id', a.id)
+              .order('position', ascending: true);
           require(
             orderedPhotos.first['position'] == 0,
             'Photo order not ascending',
           );
           require(
-            (await repository.offers()).first['tier'] == 'free',
+            (await live
+                        .from('membership_offers')
+                        .select()
+                        .order('price_minor', ascending: true))
+                    .first['tier'] ==
+                'free',
             'Free catalog should precede paid proposals',
           );
           await live.realtime.setAuth(live.auth.currentSession!.accessToken);

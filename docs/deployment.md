@@ -1,4 +1,4 @@
-﻿# اختبار NOVA 0.3 ونشره
+# اختبار NOVA 0.3 ونشره
 
 افتح [التطبيق](https://mohamedmohsenarabtec-bot.github.io/NOVA/) أو [المصدر](https://github.com/mohamedmohsenarabtec-bot/NOVA). هذه معاينة تطوير؛ الدفع والتجديد والتجربة المدفوعة ومكافآت الدعوات غير مفعلة. الأسعار بالجنيه المصري مقترحات توضيحية لم يعتمدها المالك.
 
@@ -26,7 +26,7 @@ flutter build web --release --base-href=/NOVA/ --dart-define-from-file=config/lo
 flutter build apk --release --dart-define-from-file=config/local.json
 ```
 
-المخطط الحالي عشرة ترحيلات مرتبة. لا تشغّل db reset على مشروع المالك. افحص inspect_remote.sql ثم migration list وdb push --dry-run --linked. لا تطبق إلا الناقص بعد نجاح اختبارات قاعدة معزولة. بعد التطبيق نفّذ verify_remote.sql قراءة فقط. client_readiness=4 متعمد لحماية التطبيقات القديمة؛ client_capabilities=10 للإصدار الجديد.
+المخطط الحالي اثنا عشر ترحيلًا مرتبة. لا تشغّل db reset على مشروع المالك. افحص inspect_remote.sql ثم migration list وdb push --dry-run --linked. لا تطبق إلا الناقص بعد نجاح اختبارات قاعدة معزولة. بعد التطبيق نفّذ verify_remote.sql قراءة فقط. client_readiness=4 متعمد لحماية التطبيقات القديمة؛ client_capabilities=10 للإصدار الجديد.
 
 دالة الصور الخادمية جزء لازم من النشر:
 
@@ -48,7 +48,7 @@ dart run scripts/live_iteration.dart config/local.json --browser-url=https://moh
 
 ## Android وiOS والنشر
 
-سبب برمجي مكتشف لتعليق البداية: انتظار الشبكة قبل runApp. الإصلاح يعرض Flutter فورًا ومهلة واضحة وإعادة محاولة، بدل البقاء على شعار النظام. حالة هاتف Xiaomi الفعلية لم تُفحص عبر USB؛ لا نستنتج سبب شبكته تحديدًا.
+كشف التشخيص فشل SharedPreferences في APK release قبل الاتصال بالشبكة: يصغّر R8 أسماء أصناف Kotlin التي تبحث عنها JNI بالاسم. أضيفت ست قواعد حفظ محددة من إصلاح Flutter الرسمي دون تعطيل التصغير. يعرض Flutter الآن أيضًا فورًا، بمهلة وإعادة محاولة، دون استهلاك مسار الدردشة العميق أثناء البداية. حالة هاتف Xiaomi الفعلية لم تُفحص عبر USB.
 
 ملف APK: build/app/outputs/flutter-apk/app-release.apk. توقيعه الحالي شهادة Android Debug الأصلية للتجربة، وليس إصدار Play Store. احصل على رابط النسخة الجديدة وبصمتها ونتيجة تثبيتها من BUILD_STATUS.md وdocs/verification/iteration-0.3.json. لا تستخدم رابط إصدار 0.2 القديم لتقييم الإصلاح.
 
@@ -56,8 +56,20 @@ dart run scripts/live_iteration.dart config/local.json --browser-url=https://moh
 
 Pages ينشر main فقط، بمسار /NOVA/، من متغيرات GitHub العامة SUPABASE_URL وSUPABASE_PUBLISHABLE_KEY. تحقق من نجاح workflow ثم build-info.json ومطابقة SHA مع main، ومن تحميل الصفحة وmain.dart.js وملفات الخطوط. لا يعني push وحده نجاح النشر.
 
-iOS: أُضيف إذن اختيار الصور، والحد الأدنى 15.0. سير macOS يبني unsigned عند توفر مشغّل؛ لا يوجد ادعاء ببناء أو اختبار iOS ما لم تسجل نتيجة فعلية. المتجر يحتاج حساب Apple وتوقيعًا وProvisioning.
+iOS: أُضيف إذن اختيار الصور، والحد الأدنى 15.0. نجح سير macOS/Xcode رقم 39739210772 في بناء unsigned فعليًا. لم يختبر جهاز iPhone ولم يوقع الإصدار. المتجر يحتاج حساب Apple وتوقيعًا وProvisioning.
 
 ## إجراءات تشغيل لم تكتمل
 
 عامل التنفيذ النهائي لطلبات الحذف بعد مهلة 7 أيام غير منفذ؛ الطلب والإلغاء والإخفاء محفوظة، ويجب على الإدارة معالجة الطلبات وفق السياسة. retention_maintenance إجراء خادمي مخول ولم يجدول تلقائيًا. مراجعة الإحالات ومنح المكافأة تحتاج مشغلًا مخولًا وقواعد معتمدة؛ الأزرار لا تمنح صلاحيات أو أرصدة. الدفع وPush والتوثيق الآلي وفحص محتوى الصور وإطلاق المتاجر مراحل لاحقة.
+
+## تسليم النسخة التي اختُبرت فعليًا — 22 أكتوبر 2026
+
+- [تنزيل APK المصحح 0.3.0، رقم بناء 4](https://github.com/mohamedmohsenarabtec-bot/NOVA/releases/download/v0.3.0-preview.3/app-release.apk). هذا هو رابط النسخة الحالية؛ معاينتا 0.3 السابقتان كانتا قبل إغلاق عطل R8.
+- البصمة SHA256: `5F74949CADFBA49056D7E311FAF427445548CF0BEEE9CDFB169685D66C3C4C1C`، والحجم 63,120,118 بايت. الملف المحلي: `build/app/outputs/flutter-apk/app-release.apk`.
+- أُعيد تنزيل الملف من GitHub وطابقت البصمة البناء المحلي. نجح فحص التوقيع والمحاذاة 16 KiB. التوقيع تجريبي أصلي، وليس توقيع متجر Play.
+- [اختبار Android 35 رقم 39741049121](https://github.com/mohamedmohsenarabtec-bot/NOVA/actions/runs/39741049121) نجح في التثبيت والوصول الفعلي للدخول، والانقطاع، والضغط على زر إعادة المحاولة والعودة للدخول. تمت مراجعة الصور الثلاث والسجل. هاتف Xiaomi الفعلي لم يُختبر عبر USB.
+- أُعيد تشغيل APK القديم نفسه: ظهر NoSuchMethodError في SharedPreferences قبل runApp. طُبقت قواعد JNI المحددة من [إصلاح Flutter الرسمي](https://github.com/flutter/packages/pull/13311) مع بقاء R8 مفعّلًا.
+- نجح 34 اختبار Flutter و104 اختبار SQL، والتحليل والتنسيق وبناء الويب وAPK. نجحت 13 خطوة قبول حي تشمل صور المتصفح وRealtime والخصوصية والتنظيف. أُعيد التحقق من دخول وخروج الحسابين التجريبيين الموجودين ورسائلهما وصلاحياتهما العادية.
+- [بناء iOS غير الموقّع رقم 39740709559](https://github.com/mohamedmohsenarabtec-bot/NOVA/actions/runs/39740709559) نجح فعلًا على macOS/Xcode؛ لم يختبر iPhone ولا يشمل توقيعًا أو نشرًا للمتجر.
+- شفرة التطبيق المختبرة: `1c8648d43a4e315b1a9946150ec057daec69858a`. تحديثات التوثيق وأداة الاختبار التالية لا تغير التطبيق المختبر؛ أحدث نشر متاح في build-info.json.
+- الأدلة الخالية من بيانات الدخول: `docs/verification/iteration-0.3.json`، والحالة والقيود التشغيلية في `BUILD_STATUS.md`.

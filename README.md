@@ -1,8 +1,9 @@
-﻿# NOVA — معاينة تطوير 0.3
+# NOVA — معاينة تطوير 0.3
 
 تطبيق Flutter قائم بالعربية والإنجليزية، متصل بمشروع Supabase الحقيقي، للويب وAndroid وiOS. **ليس إصدارًا تجاريًا معتمدًا.**
 
 - [افتح التطبيق](https://mohamedmohsenarabtec-bot.github.io/NOVA/)
+- [APK Android المصحح](https://github.com/mohamedmohsenarabtec-bot/NOVA/releases/download/v0.3.0-preview.3/app-release.apk)
 - [المصدر](https://github.com/mohamedmohsenarabtec-bot/NOVA)
 - [نتائج البناء والتحقق والقيود](BUILD_STATUS.md)
 - [تعليمات التشغيل والنشر بالعربية](docs/deployment.md)

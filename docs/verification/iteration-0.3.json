@@ -1,0 +1,134 @@
+{
+    "verified_utc":  "2026-10-22T07:37:10.297056Z",
+    "application_source":  "1c8648d43a4e315b1a9946150ec057daec69858a",
+    "repository":  "https://github.com/mohamedmohsenarabtec-bot/NOVA",
+    "web":  "https://mohamedmohsenarabtec-bot.github.io/NOVA/",
+    "pages_run":  39740709517,
+    "flutter":  {
+                    "web_release":  "PASS /NOVA/",
+                    "tests_status":  "PASS",
+                    "tests":  34,
+                    "analyze":  "PASS: zero issues",
+                    "apk_release":  "PASS",
+                    "format":  "PASS"
+                },
+    "database":  {
+                     "sql_status":  "PASS",
+                     "preserved_administrators":  1,
+                     "ci_run":  39741045339,
+                     "migrations":  12,
+                     "preserved_accounts":  3,
+                     "capabilities":  10,
+                     "public_rls_tables":  29,
+                     "isolated_development_accounts":  2,
+                     "isolated_sql_tests":  104,
+                     "legacy_readiness":  4
+                 },
+    "live_acceptance":  [
+                            {
+                                "flow":  "existing backend capabilities and immediate signup settings",
+                                "status":  "PASS"
+                            },
+                            {
+                                "flow":  "fictional seed isolated before becoming discoverable; distinct profiles persist",
+                                "status":  "PASS"
+                            },
+                            {
+                                "flow":  "public projection and private profile RLS prevent contact and hidden-field leakage",
+                                "status":  "PASS"
+                            },
+                            {
+                                "flow":  "saved regional filtering and server-side advanced-filter gate",
+                                "status":  "PASS"
+                            },
+                            {
+                                "flow":  "favorites are private and deduplicated without notifications",
+                                "status":  "PASS"
+                            },
+                            {
+                                "flow":  "real JPEG upload, finalization, private access and photo ordering",
+                                "status":  "PASS"
+                            },
+                            {
+                                "flow":  "pending likes have real expiration; reciprocal likes create one persistent match",
+                                "status":  "PASS"
+                            },
+                            {
+                                "flow":  "two-way persistent chat and authenticated realtime delivery",
+                                "status":  "PASS"
+                            },
+                            {
+                                "flow":  "notification unread/read state, billing preview and referral abuse controls",
+                                "status":  "PASS"
+                            },
+                            {
+                                "flow":  "published UI, localization, themes, account screens and persistent chat",
+                                "status":  "PASS"
+                            },
+                            {
+                                "flow":  "block immediately denies chat and authenticated photo retrieval",
+                                "status":  "PASS"
+                            },
+                            {
+                                "flow":  "delete only newly-created QA identity",
+                                "status":  "PASS"
+                            },
+                            {
+                                "flow":  "delete only newly-created QA identity",
+                                "status":  "PASS"
+                            }
+                        ],
+    "existing_development_accounts":  {
+                                          "login_logout_relogin":  "PASS",
+                                          "ordinary_roles":  "PASS",
+                                          "count":  2,
+                                          "persisted_profiles_chat":  "PASS"
+                                      },
+    "apk":  {
+                "version_code":  4,
+                "signature":  "Android Debug test certificate, verified",
+                "version":  "0.3.0",
+                "physical_xiaomi":  "NOT TESTED",
+                "min_sdk":  24,
+                "local_path":  "build/app/outputs/flutter-apk/app-release.apk",
+                "sha256":  "5F74949CADFBA49056D7E311FAF427445548CF0BEEE9CDFB169685D66C3C4C1C",
+                "android_35_install_auth_offline_retry_recovery":  "PASS",
+                "download_matches_local":  true,
+                "bytes":  63120118,
+                "package":  "com.nova.app.nova",
+                "installation_run":  39741049121,
+                "release":  "v0.3.0-preview.3",
+                "original_failure_reproduced_run":  39739967181,
+                "abis":  [
+                             "arm64-v8a",
+                             "armeabi-v7a",
+                             "x86_64"
+                         ],
+                "zip_alignment_16k":  "PASS",
+                "target_sdk":  36,
+                "url":  "https://github.com/mohamedmohsenarabtec-bot/NOVA/releases/download/v0.3.0-preview.3/app-release.apk"
+            },
+    "ios":  {
+                "signing":  "NOT CONFIGURED",
+                "macos_run":  39740709559,
+                "device_installation":  "NOT TESTED",
+                "unsigned_build":  "PASS",
+                "runner_app_mb":  21.8
+            },
+    "security":  {
+                     "referral_rewards_enabled":  false,
+                     "public_config_only":  "PASS",
+                     "payments_enabled":  false,
+                     "trials_enabled":  false,
+                     "cross_user_photo_block_denial":  "PASS",
+                     "tracked_and_compiled_credential_scan":  "PASS"
+                 },
+    "remaining":  [
+                      "Physical Android/iPhone feature QA and signing/store release",
+                      "Push notifications",
+                      "Automated media content/malware review",
+                      "Scheduled retention and reviewed final deletion/anonymization worker",
+                      "Approved prices/rewards and real store billing/receipt/restore/refund integration",
+                      "Full referral operator dashboard and advanced fraud detection"
+                  ]
+}
