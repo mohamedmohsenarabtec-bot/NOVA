@@ -53,7 +53,7 @@ create policy photos_visible on public.profile_photos for select to authenticate
 grant execute on function private.may_read_photo(public.profile_photos) to authenticated;
 
 create function private.profile_projection(p public.profiles) returns jsonb language sql stable security definer set search_path='' as $$
- select jsonb_build_object('id',p.id,'display_name',p.display_name,'age',extract(year from age(p.birth_date))::int,'verified',p.verified,'completion',private.profile_completion(p),
+ select jsonb_build_object('id',p.id,'display_name',p.display_name,'age',extract(year from age(p.birth_date))::int,'verified',p.verified,'completion',private.profile_completion(p),'is_favorite',exists(select 1 from public.favorites f where f.user_id=auth.uid() and f.target_id=p.id),'is_match',exists(select 1 from public.matches m where m.user_a=least(auth.uid(),p.id) and m.user_b=greatest(auth.uid(),p.id)),
  'photos',coalesce((select jsonb_agg(jsonb_build_object('id',x.id,'path',x.path,'visibility',x.visibility,'position',x.position) order by x.position,x.created_at) from public.profile_photos x where x.owner_id=p.id and x.ready and private.may_read_photo(x)),'[]'::jsonb))
  || case when 'city'=any(p.public_fields) then jsonb_build_object('city',p.city) else '{}' end
  || case when 'bio'=any(p.public_fields) then jsonb_build_object('bio',p.bio) else '{}' end
@@ -180,3 +180,12 @@ create or replace function public.discover(page_offset integer default 0) return
  and not exists(select 1 from public.discovery_actions d where d.actor_id=me.id and d.target_id=p.id)
  order by p.id limit 20 offset greatest(0,least(page_offset,10000));
 $$;
+
+-- Close project-specific default API grants within this migration transaction.
+do $$ declare fn text; begin
+ for fn in select p.oid::regprocedure::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace where
+ (n.nspname='private' and p.proname in ('tier','profile_completion','may_view_profile','may_read_photo','profile_projection')) or
+ (n.nspname='public' and p.proname in ('save_profile_core','save_profile','public_profile','save_discovery_filters','discover_profiles','discovery_summary','toggle_favorite','favorite_profiles','prepare_profile_photo','finalize_profile_photo','manage_profile_photos'))
+ loop execute 'revoke all on function '||fn||' from public,anon,authenticated'; end loop;
+end $$;
+grant execute on function private.may_read_photo(public.profile_photos),public.save_profile(jsonb),public.public_profile(uuid),public.save_discovery_filters(jsonb),public.discover_profiles(integer),public.discovery_summary(),public.toggle_favorite(uuid,boolean),public.favorite_profiles(),public.prepare_profile_photo(text),public.finalize_profile_photo(uuid),public.manage_profile_photos(uuid,text,uuid[],boolean) to authenticated;

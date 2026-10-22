@@ -85,7 +85,9 @@ grant select on public.account_deletion_requests to authenticated;
 create function public.request_account_deletion(cancel_request boolean default false) returns void language plpgsql security definer set search_path='' as $$
 begin
  if auth.uid() is null then raise exception 'Authentication required'; end if;
- if cancel_request then update public.account_deletion_requests set cancelled_at=now() where user_id=auth.uid() and execute_after>now();
+ if cancel_request then
+  update public.account_deletion_requests set cancelled_at=now() where user_id=auth.uid() and execute_after>now();
+  if not found then raise exception 'Cancellation period ended'; end if;
  else
   insert into public.account_deletion_requests(user_id) values(auth.uid()) on conflict(user_id) do update set requested_at=now(),execute_after=now()+interval '7 days',cancelled_at=null;
   update public.profiles set visible=false where id=auth.uid();
@@ -115,3 +117,15 @@ end $$;
 revoke all on private.identity_salt,private.benefit_history from public,anon,authenticated;
 grant execute on function private.may_read_photo(public.profile_photos),public.save_profile(jsonb),public.public_profile(uuid),public.save_discovery_filters(jsonb),public.discover_profiles(integer),public.discovery_summary(),public.toggle_favorite(uuid,boolean),public.favorite_profiles(),public.prepare_profile_photo(text),public.finalize_profile_photo(uuid),public.manage_profile_photos(uuid,text,uuid[],boolean),public.interaction_overview(),public.end_match(uuid),public.chat_list(),public.mark_chat_read(uuid),public.notification_inbox(integer),public.read_notifications(uuid),public.membership_status(),public.referral_progress(),public.claim_referral(text),public.review_referral(uuid,boolean),public.request_account_deletion(boolean) to authenticated;
 grant execute on function public.grant_referral_reward(uuid) to service_role;
+
+create function private.notify_account_change() returns trigger language plpgsql security definer set search_path='' as $$
+begin
+ if tg_table_name='profiles' then
+  if new.verified is distinct from old.verified then perform private.notify(new.id,'verification',null,'verification:'||new.id||':'||new.verified::text||':'||extract(epoch from now())::text); end if;
+ else perform private.notify(new.user_id,'billing',null,'membership:'||new.user_id||':'||new.feature||':'||new.expires_at::text);
+ end if;
+ return new;
+end; $$;
+revoke all on function private.notify_account_change() from public,anon,authenticated;
+create trigger profile_verification_notification after update of verified on public.profiles for each row execute function private.notify_account_change();
+create trigger entitlement_notification after insert or update on public.entitlements for each row execute function private.notify_account_change();

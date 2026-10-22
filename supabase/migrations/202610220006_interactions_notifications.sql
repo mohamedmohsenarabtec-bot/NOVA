@@ -9,6 +9,7 @@ alter table public.matches add column ended_at timestamptz;
 alter table public.notifications drop constraint notifications_kind_check;
 alter table public.notifications add constraint notifications_kind_check check(kind in ('like','match','message','verification','billing','referral','expiring','system'));
 alter table public.notifications add column event_key text unique;
+insert into public.feature_flags(key,enabled,config) values('interaction_window',true,'{"pending_hours":48}');
 
 create or replace function private.can_chat(conversation uuid) returns boolean language sql stable security definer set search_path='' as $$
  select exists(select 1 from public.conversations c join public.matches m on m.id=c.match_id where c.id=conversation and m.ended_at is null and auth.uid() in (m.user_a,m.user_b) and private.is_active(m.user_a) and private.is_active(m.user_b) and not private.is_blocked(m.user_a,m.user_b));
@@ -41,7 +42,7 @@ begin
  if private.tier(me)='plus' then daily:=100; elsif private.tier(me)='premium' then daily:=200; end if;
  if exists(select 1 from public.entitlements where user_id=me and feature='referral_extra_likes' and expires_at>now()) then daily:=daily+25; end if;
  if (select count(*) from public.discovery_actions where actor_id=me and created_at>=date_trunc('day',now() at time zone 'UTC') at time zone 'UTC')>=daily then raise exception 'Daily limit reached'; end if;
- insert into public.discovery_actions(actor_id,target_id,kind,state,expires_at) values(me,target_id,action_kind,case when action_kind='like' then 'pending' else 'dismissed' end,now()+interval '48 hours') returning * into outgoing;
+ insert into public.discovery_actions(actor_id,target_id,kind,state,expires_at) values(me,target_id,action_kind,case when action_kind='like' then 'pending' else 'dismissed' end,now()+make_interval(hours=>coalesce((select greatest(1,least(168,(config->>'pending_hours')::int)) from public.feature_flags where key='interaction_window'),48))) returning * into outgoing;
  if action_kind='pass' then
   update public.discovery_actions set state='dismissed' where actor_id=target_id and discovery_actions.target_id=me and state='pending'; return false;
  end if;
@@ -105,4 +106,12 @@ end; $$;
 create function public.read_notifications(notification_id uuid default null) returns void language sql security definer set search_path='' as $$
  update public.notifications set read_at=now() where user_id=auth.uid() and read_at is null and (notification_id is null or id=notification_id);
 $$;
+grant execute on function public.interaction_overview(),public.end_match(uuid),public.chat_list(),public.mark_chat_read(uuid),public.notification_inbox(integer),public.read_notifications(uuid) to authenticated;
+-- Close all newly-created helpers and API functions before committing phase 6.
+do $$ declare fn text; begin
+ for fn in select p.oid::regprocedure::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace where
+ (n.nspname='private' and p.proname in ('notify','expire_interactions')) or
+ (n.nspname='public' and p.proname in ('interaction_overview','end_match','chat_list','mark_chat_read','notification_inbox','read_notifications'))
+ loop execute 'revoke all on function '||fn||' from public,anon,authenticated'; end loop;
+end $$;
 grant execute on function public.interaction_overview(),public.end_match(uuid),public.chat_list(),public.mark_chat_read(uuid),public.notification_inbox(integer),public.read_notifications(uuid) to authenticated;
