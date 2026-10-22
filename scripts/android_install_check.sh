@@ -33,4 +33,21 @@ adb pull /sdcard/nova-offline.xml "$evidence/offline.xml"
 grep -q 'Retry' "$evidence/offline.xml"
 adb shell svc wifi enable
 adb shell svc data enable
-echo 'PASS: published APK installed, launched, stayed alive, and exposed offline Retry.'
+sleep 3
+read -r retry_x retry_y < <(python3 - <<'PY'
+import re, xml.etree.ElementTree as ET
+nodes = ET.parse('.local/android-test/offline.xml').iter('node')
+button = next(n for n in nodes if n.get('clickable') == 'true' and 'Retry' in n.get('content-desc', ''))
+x1, y1, x2, y2 = map(int, re.findall(r'\d+', button.get('bounds')))
+print((x1+x2)//2, (y1+y2)//2)
+PY
+)
+adb shell input tap "$retry_x" "$retry_y"
+sleep 20
+adb exec-out screencap -p > "$evidence/recovered.png"
+adb shell uiautomator dump /sdcard/nova-recovered.xml
+adb pull /sdcard/nova-recovered.xml "$evidence/recovered.xml"
+grep -q 'تسجيل الدخول' "$evidence/recovered.xml"
+adb logcat -d -s AndroidRuntime:E flutter:E > "$evidence/runtime-final.txt"
+if grep -q 'FATAL EXCEPTION\|Unhandled Exception' "$evidence/runtime-final.txt"; then exit 1; fi
+echo 'PASS: published APK installed, reached Auth, exposed offline Retry and recovered through the real button.'
