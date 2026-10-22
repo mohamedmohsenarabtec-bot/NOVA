@@ -41,7 +41,7 @@ begin
  if daily is null then raise exception 'Discovery disabled'; end if;
  if private.tier(me)='plus' then daily:=100; elsif private.tier(me)='premium' then daily:=200; end if;
  if exists(select 1 from public.entitlements where user_id=me and feature='referral_extra_likes' and expires_at>now()) then daily:=daily+25; end if;
- if (select count(*) from public.discovery_actions where actor_id=me and created_at>=date_trunc('day',now() at time zone 'UTC') at time zone 'UTC')>=daily then raise exception 'Daily limit reached'; end if;
+ if action_kind='like' and (select count(*) from public.discovery_actions where actor_id=me and kind='like' and created_at>=date_trunc('day',now() at time zone 'UTC') at time zone 'UTC')>=daily then raise exception 'Daily limit reached'; end if;
  insert into public.discovery_actions(actor_id,target_id,kind,state,expires_at) values(me,target_id,action_kind,case when action_kind='like' then 'pending' else 'dismissed' end,now()+make_interval(hours=>coalesce((select greatest(1,least(168,(config->>'pending_hours')::int)) from public.feature_flags where key='interaction_window'),48))) returning * into outgoing;
  if action_kind='pass' then
   update public.discovery_actions set state='dismissed' where actor_id=target_id and discovery_actions.target_id=me and state='pending'; return false;

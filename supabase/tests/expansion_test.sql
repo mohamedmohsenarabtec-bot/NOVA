@@ -72,5 +72,33 @@ select lives_ok($$select public.end_match((select id from public.conversations l
 select is((select count(*)::int from public.messages),0,'unmatched conversation no longer readable');
 reset role;
 select is((select count(*)::int from public.messages),1,'unmatch preserves history on server');
+-- Premium visibility is based on expiring server entitlements, not a client flag.
+insert into public.entitlements(user_id,feature,expires_at) values('00000000-0000-0000-0000-000000000104','premium',now()+interval '1 day');
+set local role authenticated;
+set local request.jwt.claim.sub='00000000-0000-0000-0000-000000000101';
+select is(public.discovery_action('00000000-0000-0000-0000-000000000104','like'),false,'pending like for Premium test');
+set local request.jwt.claim.sub='00000000-0000-0000-0000-000000000104';
+select is(jsonb_array_length(public.interaction_overview()->'incoming'),1,'eligible Premium receives real allowed liker');
+select throws_ok($$select private.notify(auth.uid(),'match',null,'forged-event')$$,'42501',null,'notification producer is not a client API');
+select throws_ok($$select salt from private.identity_salt$$,'42501',null,'identity salt is private');
+select throws_ok($$select public.activate_verified_trial(auth.uid(),'premium','forged-client-event')$$,'42501',null,'trial cannot be activated by a client');
+reset role;
+update public.profiles set is_test_account=true where id='00000000-0000-0000-0000-000000000104';
+set local role authenticated;
+set local request.jwt.claim.sub='00000000-0000-0000-0000-000000000101';
+select throws_ok($$select public.public_profile('00000000-0000-0000-0000-000000000104')$$,'P0001','Profile unavailable','fictional development profile is isolated from ordinary feed');
+reset role;
+select throws_ok($$select public.activate_verified_trial('00000000-0000-0000-0000-000000000102','plus','verified-fixture-event')$$,'P0001','Trials pending business approval','server cannot activate an unapproved trial');
+update public.feature_flags set enabled=true where key='membership_trials';
+select lives_ok($$select public.activate_verified_trial('00000000-0000-0000-0000-000000000102','plus','verified-fixture-event')$$,'isolated approved verifier may consume first trial');
+update public.entitlements set expires_at=now()-interval '1 minute' where user_id='00000000-0000-0000-0000-000000000102';
+select throws_ok($$select public.activate_verified_trial('00000000-0000-0000-0000-000000000102','plus','second-fixture-event')$$,'P0001','Trial already used','identity history prevents repeat trial after entitlement expires');
+-- Photo RLS does not disclose private metadata even when the profile is eligible.
+insert into public.profile_photos(owner_id,path,visibility,ready) values('00000000-0000-0000-0000-000000000103','00000000-0000-0000-0000-000000000103/fixture.jpg','private',true);
+set local role authenticated;
+set local request.jwt.claim.sub='00000000-0000-0000-0000-000000000102';
+select is((select count(*)::int from public.profile_photos where owner_id='00000000-0000-0000-0000-000000000103'),0,'private photo metadata denied to eligible peer');
+select is(jsonb_array_length(public.public_profile('00000000-0000-0000-0000-000000000103')->'photos'),0,'private photo absent from public projection');
+reset role;
 select * from finish();
 rollback;

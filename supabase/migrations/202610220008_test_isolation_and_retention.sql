@@ -7,6 +7,10 @@ create function private.eligible(viewer uuid,target uuid) returns boolean langua
  select private.eligible_core(viewer,target) and exists(select 1 from public.profiles a,public.profiles b where a.id=viewer and b.id=target and a.is_test_account=b.is_test_account);
 $$;
 revoke all on function private.eligible(uuid,uuid) from public,anon,authenticated;
+alter function private.profile_projection(public.profiles) rename to profile_projection_core;
+revoke all on function private.profile_projection_core(public.profiles) from public,anon,authenticated;
+create function private.profile_projection(p public.profiles) returns jsonb language sql stable security definer set search_path='' as $$select private.profile_projection_core(p)||jsonb_build_object('is_test_account',p.is_test_account);$$;
+revoke all on function private.profile_projection(public.profiles) from public,anon,authenticated;
 
 -- Shared completion/age validation remains unchanged. Old clients receive a
 -- schema version >=4; the new client requires all eight migrations.
