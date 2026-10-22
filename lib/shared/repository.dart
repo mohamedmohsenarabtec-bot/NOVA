@@ -144,8 +144,10 @@ class NovaRepository {
       client.rpc('read_notifications', params: {'notification_id': id});
   Future<DbRow> membership() async =>
       Map<String, dynamic>.from(await client.rpc('membership_status'));
-  Future<List<DbRow>> offers() =>
-      client.from('membership_offers').select().order('price_minor');
+  Future<List<DbRow>> offers() => client
+      .from('membership_offers')
+      .select()
+      .order('price_minor', ascending: true);
   Future<DbRow> referrals() async =>
       Map<String, dynamic>.from(await client.rpc('referral_progress'));
   Future<void> claimReferral(String code) =>
@@ -154,7 +156,7 @@ class NovaRepository {
       .from('profile_photos')
       .select()
       .eq('owner_id', uid)
-      .order('position');
+      .order('position', ascending: true);
   Future<Uint8List> downloadPhoto(String path) async {
     final id = path.split('/').last.replaceFirst('.jpg', '');
     final response = await client.functions.invoke(
