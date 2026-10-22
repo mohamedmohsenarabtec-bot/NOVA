@@ -24,3 +24,7 @@ enable_signup = true
 # Local development only. Hosted Auth settings are separate and must be inspected.
 enable_confirmations = false
 double_confirm_changes = true
+
+[functions.profile-photo]
+# Explicit Auth verification + per-request metadata RLS inside the handler.
+verify_jwt = false
