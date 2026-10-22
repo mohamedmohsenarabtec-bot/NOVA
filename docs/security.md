@@ -1,19 +1,17 @@
-# Security and launch gates
+﻿# Security — current implementation and limitations
 
-Implemented: backend 18+ trigger, consent version recording, email/password Auth, server-side preference filtering, reciprocal-match authorization, bidirectional block enforcement, bounded query results, action/message limits, RLS on all application tables, private storage with uploads denied, explicit staff grants, moderation audit events, server-only credit/payment recording functions, generic client error messages, no secret diagnostics.
+Every user-accessible public table has RLS. Private profiles expose only the authenticated own row; public RPCs return whitelisted permitted fields and calculated age, never private email/DOB/audience. Optional details and photo visibility are explicit. Server DOB checks enforce declared age 18–120; they do not verify identity. Only actual reviewed verification state appears as verified.
 
-The age check validates declared birth date; it does not establish identity. Verification is never sold and no UI claims a user is verified without a review.
+Writes use narrowly granted security-definer RPCs with empty search_path, validation, ownership and account-state checks. New private helpers and server-only APIs explicitly revoke EXECUTE from PUBLIC, anon AND authenticated: inherited Supabase default grants otherwise remain usable. Core profile writer, notification producer, identity salt/history, receipt/trial/reward/retention procedures are not client APIs. Staff roles cannot be self-assigned. Staff route visibility is convenience; backend authorization is mandatory.
 
-Before launch:
-- Execute database tests and adversarial API tests against staging, including concurrent likes/wallet changes and suspended accounts.
-- Set Supabase email confirmation and 12-character password policy; configure production SMTP, CAPTCHA/Auth rate limits and leaked-password checks where available.
-- Confirm the implemented verified-email database checks in staging, and never enable anonymous accounts.
-- Add protected session storage on mobile, device revocation UX and reauthentication before deletion/export.
-- Exercise the implemented report/support daily submission limits; add evidence handling with audited access and per-IP API limits.
-- Finish media byte validation, resizing, EXIF removal, malware/content review and authenticated retrieval before allowing uploads.
-- Finish admin operations, MFA, role separation tests, incident handling and audited appeal resolution. Staff cannot read private messages through the current admin API.
-- Establish retention windows, backup deletion schedule, export completeness (currently profile, sent messages, purchases and submitted reports), legal basis and jurisdiction-specific review.
-- Test Android/iOS deep links, browser XSS controls, accessibility, unstable networks, reconnects and account deletion end to end.
-- Use a reviewed receipt verifier and signature-checked webhook adapter before enabling any real payments.
+Likes are unique and self-likes denied; pair/profile locks serialize matching and limits. Free users chat after mutual consent, with active-account and bidirectional block checks on reads/writes. Unmatch preserves rows while revoking access. Paid entitlements cannot override consent/block. Favorites are private and silent. Free incoming counts contain no liker IDs/photos. Premium identities remain filtered for eligibility. Notifications are owner-only and contain no message previews.
 
-The code has not received an independent security audit. Chats are access-controlled on the server, not end-to-end encrypted. Infrastructure operators may have database access.
+Storage is private. Photo prepare/finalize validates ownership, generated paths, actual object existence, JPEG MIME and 5 MiB limit; six photos maximum. Flutter decodes JPEG/PNG/WebP, bounds dimensions, bakes orientation, re-encodes and removes EXIF/GPS. These client checks can be bypassed by a malicious client: server-side media decoding, malware/content moderation and abuse review are still launch work. Authenticated photo delivery rechecks metadata RLS on EVERY cross-user request through the Edge function, with no-store responses. Cross-user raw Storage download is denied. A live test caught cached authorized downloads surviving a later block; the gateway closed that tested path. Already-downloaded media cannot be remotely recalled.
+
+Payments/trials/rewards are OFF. Server-only verified activation procedures require approved flags and audit events. Referrals have non-self, unique invitee/identity-history, reviewed qualification, minimum account age/external match, rolling cap and inviter lock; rewards are idempotent and temporary. No address book, invitee email or client-awarded credit is involved. Device farms and distinct-address abuse are not comprehensively detected; manual review remains required. Private HMAC history expires after 180 days; schedule authorized retention maintenance before launch.
+
+Own-data export includes only the caller's source records; it is a privacy feature, not staff dataset export. Seven-day deletion requests are persistent and hide the profile. Final purge/anonymization worker is not implemented; legacy direct deletion retains its existing cascades. Review shared conversation retention, evidence holds, backups, storage cleanup and jurisdiction-specific obligations before launch. Do not claim automatic legal compliance.
+
+Development Auth currently auto-confirms email. Password recovery remains disabled until SMTP/deep links are tested. Before launch review confirmation, CAPTCHA, Auth limits, leaked-password controls, native Keychain/Keystore session storage, staff MFA, incident handling, CSP/XSS/dependency review and independent security audit. Chat is access-controlled, not end-to-end encrypted.
+
+Never commit config/local.json, .local/, passwords, CLI tokens, signing keys or privileged Supabase keys. Browser/native builds contain only public project configuration. Test credentials must not enter screenshots/logs/URLs/build defines or public documentation. Development fixtures are labelled and isolated from ordinary discovery. Isolated SQL fixtures roll back; live QA cleans only identities it created. No production reset is permitted.

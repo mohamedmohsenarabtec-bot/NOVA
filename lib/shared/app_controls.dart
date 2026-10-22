@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
 
+import 'dart:async';
+
+import 'package:go_router/go_router.dart';
+
+import 'account_scope.dart';
+import 'repository.dart';
+
 import '../core/preferences.dart';
 import '../core/strings.dart';
 
@@ -19,6 +26,8 @@ class AppControls extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (AccountScope.maybeOf(context)?.client.auth.currentUser != null)
+          NotificationBell(repo: AccountScope.maybeOf(context)!),
         PopupMenuButton<String>(
           tooltip: s.t('اللغة', 'Language'),
           initialValue: prefs.locale.languageCode,
@@ -95,6 +104,56 @@ class AppControls extends StatelessWidget {
             child: const Icon(Icons.warning_amber_outlined),
           ),
       ],
+    );
+  }
+}
+
+class NotificationBell extends StatefulWidget {
+  final NovaRepository repo;
+  const NotificationBell({super.key, required this.repo});
+  @override
+  State<NotificationBell> createState() => _NotificationBellState();
+}
+
+class _NotificationBellState extends State<NotificationBell> {
+  int unread = 0;
+  Timer? timer;
+  @override
+  void initState() {
+    super.initState();
+    refresh();
+    timer = Timer.periodic(const Duration(seconds: 40), (_) => refresh());
+  }
+
+  Future<void> refresh() async {
+    try {
+      final inbox = await widget.repo.notifications();
+      if (mounted) setState(() => unread = (inbox['unread'] as num).toInt());
+    } catch (_) {
+      /* The full inbox offers explicit retry; do not expose diagnostics. */
+    }
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    return IconButton(
+      tooltip: s.t(
+        'الإشعارات، غير المقروء $unread',
+        'Notifications, $unread unread',
+      ),
+      onPressed: () => context.go('/notifications'),
+      icon: Badge(
+        isLabelVisible: unread > 0,
+        label: Text(unread > 99 ? '99+' : '$unread'),
+        child: const Icon(Icons.notifications_outlined),
+      ),
     );
   }
 }

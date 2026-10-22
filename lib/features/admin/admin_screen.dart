@@ -48,7 +48,9 @@ class _AdminScreenState extends State<AdminScreen> {
       ),
       body: AsyncPane<List<DbRow>>(
         future: roles,
-        retry: () => setState(() => roles = widget.repo.roles()),
+        retry: () => setState(() {
+          roles = widget.repo.roles();
+        }),
         builder: (roles) {
           if (!roles.any(
             (r) => ['moderator', 'administrator'].contains(r['role']),
@@ -64,7 +66,9 @@ class _AdminScreenState extends State<AdminScreen> {
           }
           return AsyncPane<List<DbRow>>(
             future: reports,
-            retry: () => setState(() => reports = widget.repo.queue()),
+            retry: () => setState(() {
+              reports = widget.repo.queue();
+            }),
             builder: (rows) => rows.isEmpty
                 ? EmptyState(
                     icon: Icons.verified_user_outlined,

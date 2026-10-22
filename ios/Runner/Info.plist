@@ -7,7 +7,8 @@
 	<key>CFBundleLocalizations</key><array><string>ar</string><string>en</string></array>
 <key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
-	<key>CFBundleDisplayName</key>
+	<key>NSPhotoLibraryUsageDescription</key><string>Select only the photos you want to share on your NOVA profile.</string>
+<key>CFBundleDisplayName</key>
 	<string>NOVA</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>

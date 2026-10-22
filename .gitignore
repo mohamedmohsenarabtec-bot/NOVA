@@ -68,3 +68,4 @@ docs/verification/live-*.json
 *.p8
 google-services.json
 GoogleService-Info.plist
+android/.kotlin/

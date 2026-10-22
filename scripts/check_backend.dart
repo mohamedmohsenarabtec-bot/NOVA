@@ -32,11 +32,11 @@ Future<void> main(List<String> args) async {
     report['signup_disabled'] = settings['disable_signup'];
     final schema = await api.call(
       'POST',
-      '/rest/v1/rpc/client_readiness',
+      '/rest/v1/rpc/client_capabilities',
       body: {},
       allowFailure: true,
     );
-    report['nova_schema_ready'] = schema.status == 200 && schema.data == 4;
+    report['nova_schema_ready'] = schema.status == 200 && schema.data == 10;
     report['schema_probe_http'] = schema.status;
     if (schema.status >= 400) {
       report['schema_probe_code'] = schema.data is Map

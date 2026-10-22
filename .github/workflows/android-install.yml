@@ -1,0 +1,44 @@
+name: Android published APK installation
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing NOVA GitHub release to test
+        required: true
+        default: v0.3.0-preview.1
+permissions:
+  contents: read
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - name: Fetch the exact published APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOVA_RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          mkdir -p .local/android-test
+          gh release download "$NOVA_RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --pattern app-release.apk --dir .local/android-test
+          sha256sum .local/android-test/app-release.apk | tee .local/android-test/checksum.txt
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_7
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: bash scripts/android_install_check.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-install-evidence
+          path: .local/android-test
+          retention-days: 7

@@ -22,6 +22,12 @@ import '../features/subscriptions/plans_screen.dart';
 import '../features/admin/admin_screen.dart';
 import '../shared/repository.dart';
 import '../shared/widgets.dart';
+import '../shared/account_scope.dart';
+import '../features/profiles/profile_editor.dart';
+import '../features/discover/filter_screen.dart';
+import '../features/connections/connections_screen.dart';
+import '../features/notifications/notifications_screen.dart';
+import '../features/referrals/referrals_screen.dart';
 
 class NovaApp extends StatefulWidget {
   final String? startupError;
@@ -37,13 +43,33 @@ class _NovaAppState extends State<NovaApp> {
       GoRoute(path: '/', builder: (_, _) => home()),
       GoRoute(path: '/admin', builder: (_, _) => home(admin: true)),
       GoRoute(path: '/password', builder: (_, _) => home(password: true)),
+      for (final section in [
+        'profile/edit',
+        'filters',
+        'favorites',
+        'liked',
+        'notifications',
+        'referrals',
+        'plans',
+        'matches',
+        'account',
+      ])
+        GoRoute(
+          path: '/$section',
+          builder: (_, _) => home(section: section),
+        ),
       GoRoute(
         path: '/chat/:id',
         builder: (_, state) => home(chatId: state.pathParameters['id']),
       ),
     ],
   );
-  Widget home({bool admin = false, bool password = false, String? chatId}) {
+  Widget home({
+    bool admin = false,
+    bool password = false,
+    String? chatId,
+    String? section,
+  }) {
     if (!Config.configured || widget.startupError != null) {
       return Scaffold(
         appBar: AppBar(title: const NovaLogo(), actions: const [AppControls()]),
@@ -62,7 +88,12 @@ class _NovaAppState extends State<NovaApp> {
         ),
       );
     }
-    return SessionGate(admin: admin, password: password, chatId: chatId);
+    return SessionGate(
+      admin: admin,
+      password: password,
+      chatId: chatId,
+      section: section,
+    );
   }
 
   @override
@@ -95,11 +126,13 @@ class SessionGate extends StatefulWidget {
   final bool admin;
   final bool password;
   final String? chatId;
+  final String? section;
   const SessionGate({
     super.key,
     required this.admin,
     this.password = false,
     this.chatId,
+    this.section,
   });
   @override
   State<SessionGate> createState() => _SessionGateState();
@@ -111,6 +144,23 @@ class _SessionGateState extends State<SessionGate> {
   Future<DbRow?>? profile;
   bool recovery = false;
   int tab = 0;
+  int get selectedTab => switch (widget.section) {
+    'matches' => 1,
+    'plans' => 2,
+    'liked' => 3,
+    'account' || 'favorites' || 'referrals' => 4,
+    _ => tab,
+  };
+  Widget sectionBody() => switch (widget.section) {
+    'liked' => ConnectionsScreen(repo: repo),
+    'favorites' => ConnectionsScreen(repo: repo, favorites: true),
+    'notifications' => NotificationsScreen(repo: repo),
+    'referrals' => ReferralsScreen(repo: repo),
+    'plans' => PlansScreen(repo: repo),
+    'matches' => ConversationList(repo: repo),
+    'account' => SettingsScreen(repo: repo),
+    _ => const SizedBox.shrink(),
+  };
   @override
   void initState() {
     super.initState();
@@ -148,6 +198,13 @@ class _SessionGateState extends State<SessionGate> {
 
   @override
   Widget build(BuildContext context) {
+    return AccountScope(
+      repo: repo,
+      child: Builder(builder: buildSession),
+    );
+  }
+
+  Widget buildSession(BuildContext context) {
     if (repo.client.auth.currentSession == null || recovery) {
       return AuthScreen(
         repo: repo,
@@ -157,11 +214,14 @@ class _SessionGateState extends State<SessionGate> {
     }
     if (widget.password) return PasswordScreen(repo: repo);
     if (widget.admin) return AdminScreen(repo: repo);
+    if (widget.section == 'profile/edit') return ProfileEditor(repo: repo);
+    if (widget.section == 'filters') return FilterScreen(repo: repo);
     return AsyncPane<DbRow?>(
       future: profile!,
       retry: () => setState(refresh),
       builder: (p) {
-        if (p == null || p['onboarding_complete'] != true) {
+        if ((p == null || p['onboarding_complete'] != true) &&
+            widget.section != 'account') {
           return OnboardingScreen(
             repo: repo,
             initial: p,
@@ -176,6 +236,7 @@ class _SessionGateState extends State<SessionGate> {
           DiscoverScreen(repo: repo),
           ConversationList(repo: repo),
           PlansScreen(repo: repo),
+          ConnectionsScreen(repo: repo),
           SettingsScreen(repo: repo),
         ];
         final destinations = [
@@ -193,6 +254,10 @@ class _SessionGateState extends State<SessionGate> {
             label: s.plans,
           ),
           NavigationDestination(
+            icon: const Icon(Icons.favorite_border),
+            label: s.t('أعجبوا بي', 'Liked you'),
+          ),
+          NavigationDestination(
             icon: const Icon(Icons.person_outline),
             label: s.settings,
           ),
@@ -204,14 +269,18 @@ class _SessionGateState extends State<SessionGate> {
           ),
           body: LayoutBuilder(
             builder: (context, constraints) {
-              if (constraints.maxWidth < 850) return pages[tab];
+              final content = widget.section != null
+                  ? sectionBody()
+                  : pages[tab];
+              if (constraints.maxWidth < 850) return content;
               return Row(
                 children: [
                   NavigationRail(
-                    selectedIndex: tab,
+                    selectedIndex: selectedTab,
                     labelType: NavigationRailLabelType.all,
-                    onDestinationSelected: (value) =>
-                        setState(() => tab = value),
+                    onDestinationSelected: (value) => context.go(
+                      ['/', '/matches', '/plans', '/liked', '/account'][value],
+                    ),
                     destinations: destinations
                         .map(
                           (d) => NavigationRailDestination(
@@ -222,7 +291,7 @@ class _SessionGateState extends State<SessionGate> {
                         .toList(),
                   ),
                   const VerticalDivider(width: 1),
-                  Expanded(child: pages[tab]),
+                  Expanded(child: content),
                 ],
               );
             },
@@ -230,8 +299,10 @@ class _SessionGateState extends State<SessionGate> {
           bottomNavigationBar: MediaQuery.sizeOf(context).width >= 850
               ? null
               : NavigationBar(
-                  selectedIndex: tab,
-                  onDestinationSelected: (value) => setState(() => tab = value),
+                  selectedIndex: selectedTab,
+                  onDestinationSelected: (value) => context.go(
+                    ['/', '/matches', '/plans', '/liked', '/account'][value],
+                  ),
                   destinations: destinations,
                 ),
         );

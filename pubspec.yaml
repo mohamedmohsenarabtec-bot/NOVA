@@ -1,7 +1,7 @@
 name: nova
 description: Arabic-first intentional social discovery.
 publish_to: none
-version: 0.2.0+2
+version: 0.3.0+3
 environment:
   sdk: ^3.13.5
 dependencies:
@@ -13,6 +13,9 @@ dependencies:
   go_router: 18.1.0
   cupertino_icons: 1.0.9
   shared_preferences: 2.5.6
+  image_picker: ^1.2.4
+  image: ^4.12.0
+  share_plus: ^13.3.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

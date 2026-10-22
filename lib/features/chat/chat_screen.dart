@@ -9,6 +9,7 @@ import '../../shared/app_controls.dart';
 import '../../shared/brand.dart';
 import '../../shared/repository.dart';
 import '../../shared/widgets.dart';
+import '../profiles/profile_detail.dart';
 
 class ConversationList extends StatefulWidget {
   final NovaRepository repo;
@@ -19,7 +20,9 @@ class ConversationList extends StatefulWidget {
 
 class _ConversationListState extends State<ConversationList> {
   late Future<List<DbRow>> data = widget.repo.conversations();
-  void reload() => setState(() => data = widget.repo.conversations());
+  void reload() => setState(() {
+    data = widget.repo.conversations();
+  });
   @override
   Widget build(BuildContext context) {
     final s = Strings.of(context);
@@ -46,7 +49,10 @@ class _ConversationListState extends State<ConversationList> {
                   leading: const CircleAvatar(
                     child: Icon(Icons.chat_bubble_outline),
                   ),
-                  title: Text(s.t('محادثة متبادلة', 'Mutual connection')),
+                  title: Text(
+                    rows[i]['profile']?['display_name'] ??
+                        s.t('محادثة متبادلة', 'Mutual connection'),
+                  ),
                   subtitle: Text(
                     rows[i]['created_at'].toString().substring(0, 10),
                   ),
@@ -122,6 +128,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         loading = false;
         failed = false;
       });
+      if (!older && widget.repo.client.auth.currentUser != null) {
+        // A failed acknowledgement must not hide an otherwise loaded chat.
+        try {
+          await widget.repo.markChatRead(widget.conversationId);
+        } catch (_) {}
+      }
     } catch (_) {
       if (mounted && generation == loadGeneration) {
         setState(() {
@@ -188,6 +200,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
+          ChatSafety(repo: widget.repo, conversation: widget.conversationId),
           Expanded(
             child: loading
                 ? const Center(child: CircularProgressIndicator())
@@ -297,6 +310,110 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           ),
         ],
       ),
+    );
+  }
+}
+
+class ChatSafety extends StatefulWidget {
+  final NovaRepository repo;
+  final String conversation;
+  const ChatSafety({super.key, required this.repo, required this.conversation});
+  @override
+  State<ChatSafety> createState() => _ChatSafetyState();
+}
+
+class _ChatSafetyState extends State<ChatSafety> {
+  late final Future<DbRow?> peer = load();
+  Future<DbRow?> load() async {
+    if (widget.repo.client.auth.currentUser == null) return null;
+    final chats = await widget.repo.conversations();
+    final row = chats.where((r) => r['id'] == widget.conversation).firstOrNull;
+    return row?['profile'] == null
+        ? null
+        : Map<String, dynamic>.from(row!['profile']);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    return FutureBuilder<DbRow?>(
+      future: peer,
+      builder: (context, snapshot) {
+        final p = snapshot.data;
+        if (p == null) return const SizedBox.shrink();
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            TextButton(
+              onPressed: () => showProfileDetail(context, p, repo: widget.repo),
+              child: Text(p['display_name']),
+            ),
+            PopupMenuButton<String>(
+              tooltip: s.t('إجراءات السلامة', 'Safety controls'),
+              onSelected: (action) => guarded(context, () async {
+                if (action == 'report') {
+                  await widget.repo.report(p['id'], 'safety');
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(s.t('حُفظ البلاغ', 'Report saved')),
+                      ),
+                    );
+                  }
+                  return;
+                }
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (c) => AlertDialog(
+                    title: Text(
+                      s.t(
+                        action == 'block' ? 'حظر هذا الشخص؟' : 'إنهاء التطابق؟',
+                        action == 'block'
+                            ? 'Block this person?'
+                            : 'End this match?',
+                      ),
+                    ),
+                    content: Text(
+                      s.t(
+                        'ستتوقف إمكانية التواصل. لا تُحذف المحادثة من الخادم فورًا.',
+                        'Communication will stop. Conversation history is not immediately deleted from the server.',
+                      ),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(c, false),
+                        child: Text(s.t('إلغاء', 'Cancel')),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(c, true),
+                        child: Text(s.t('تأكيد', 'Confirm')),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirmed != true) return;
+                if (action == 'block') {
+                  await widget.repo.block(p['id']);
+                } else {
+                  await widget.repo.endMatch(widget.conversation);
+                }
+                if (context.mounted) context.go('/matches');
+              }),
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'report',
+                  child: Text(s.t('إبلاغ', 'Report')),
+                ),
+                PopupMenuItem(value: 'block', child: Text(s.t('حظر', 'Block'))),
+                PopupMenuItem(
+                  value: 'unmatch',
+                  child: Text(s.t('إنهاء التطابق', 'Unmatch')),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
     );
   }
 }

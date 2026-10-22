@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'dart:typed_data';
+
 import '../features/auth/auth_feedback.dart';
 
 typedef DbRow = Map<String, dynamic>;
@@ -31,7 +33,7 @@ class NovaRepository {
   Future<DbRow?> profile() =>
       client.from('profiles').select().eq('id', uid).maybeSingle();
   Future<List<DbRow>> discover({int page = 0}) async => List<DbRow>.from(
-    await client.rpc('discover', params: {'page_offset': page * 20}),
+    await client.rpc('discover_profiles', params: {'page_offset': page * 20}),
   );
   Future<void> saveProfile(DbRow values) async =>
       client.rpc('save_profile', params: {'data': values});
@@ -90,11 +92,8 @@ class NovaRepository {
   Future<void> report(String target, String category) => client
       .from('reports')
       .insert({'reporter_id': uid, 'subject_id': target, 'category': category});
-  Future<List<DbRow>> conversations() => client
-      .from('conversations')
-      .select()
-      .order('created_at', ascending: false)
-      .limit(50);
+  Future<List<DbRow>> conversations() async =>
+      List<DbRow>.from(await client.rpc('chat_list'));
   Future<List<DbRow>> messages(String id, {DateTime? before}) async {
     var query = client.from('messages').select().eq('conversation_id', id);
     if (before != null) {
@@ -105,8 +104,7 @@ class NovaRepository {
 
   Future<void> send(String id, String body) =>
       client.rpc('send_message', params: {'conversation': id, 'body': body});
-  Future<List<DbRow>> plans() =>
-      client.from('products').select().eq('active', true).order('sort_order');
+  Future<List<DbRow>> plans() => offers();
   Future<List<DbRow>> entitlements() => client
       .from('entitlements')
       .select()
@@ -124,4 +122,70 @@ class NovaRepository {
       client.from('support_tickets').insert({'user_id': uid, 'body': body});
   Future<void> deleteAccount() => client.rpc('delete_my_account');
   Future<dynamic> exportData() => client.rpc('export_my_data');
+
+  Future<DbRow> publicProfile(String id) async => Map<String, dynamic>.from(
+    await client.rpc('public_profile', params: {'target': id}),
+  );
+  Future<DbRow> discoverySummary() async =>
+      Map<String, dynamic>.from(await client.rpc('discovery_summary'));
+  Future<void> saveFilters(DbRow filters) =>
+      client.rpc('save_discovery_filters', params: {'data': filters});
+  Future<void> favorite(String id, bool enabled) =>
+      client.rpc('toggle_favorite', params: {'target': id, 'enabled': enabled});
+  Future<List<DbRow>> favorites() async =>
+      List<DbRow>.from(await client.rpc('favorite_profiles'));
+  Future<DbRow> interactions() async =>
+      Map<String, dynamic>.from(await client.rpc('interaction_overview'));
+  Future<DbRow> notifications({int offset = 0}) async =>
+      Map<String, dynamic>.from(
+        await client.rpc('notification_inbox', params: {'page_offset': offset}),
+      );
+  Future<void> readNotifications([String? id]) =>
+      client.rpc('read_notifications', params: {'notification_id': id});
+  Future<DbRow> membership() async =>
+      Map<String, dynamic>.from(await client.rpc('membership_status'));
+  Future<List<DbRow>> offers() =>
+      client.from('membership_offers').select().order('price_minor');
+  Future<DbRow> referrals() async =>
+      Map<String, dynamic>.from(await client.rpc('referral_progress'));
+  Future<void> claimReferral(String code) =>
+      client.rpc('claim_referral', params: {'invitation_code': code});
+  Future<List<DbRow>> photos() => client
+      .from('profile_photos')
+      .select()
+      .eq('owner_id', uid)
+      .order('position');
+  Future<Uint8List> downloadPhoto(String path) async {
+    final id = path.split('/').last.replaceFirst('.jpg', '');
+    final response = await client.functions.invoke(
+      'profile-photo',
+      body: {'photo_id': id},
+    );
+    return response.data as Uint8List;
+  }
+
+  Future<void> photoOrder(List<String> ids) =>
+      client.rpc('manage_profile_photos', params: {'ordered_ids': ids});
+  Future<void> photoPrivacy(String id, String visibility) => client.rpc(
+    'manage_profile_photos',
+    params: {'photo_id': id, 'photo_visibility': visibility},
+  );
+  Future<void> removePhoto(DbRow photo) async {
+    await client.storage.from('private-media').remove([
+      photo['path'] as String,
+    ]);
+    await client.rpc(
+      'manage_profile_photos',
+      params: {'photo_id': photo['id'], 'remove_photo': true},
+    );
+  }
+
+  Future<void> endMatch(String id) =>
+      client.rpc('end_match', params: {'conversation': id});
+  Future<void> markChatRead(String id) =>
+      client.rpc('mark_chat_read', params: {'conversation': id});
+  Future<void> requestDeletion({bool cancel = false}) => client.rpc(
+    'request_account_deletion',
+    params: {'cancel_request': cancel},
+  );
 }

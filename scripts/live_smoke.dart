@@ -255,12 +255,12 @@ Future<void> main(List<String> args) async {
         );
         final probe = await api.call(
           'POST',
-          '/rest/v1/rpc/client_readiness',
+          '/rest/v1/rpc/client_capabilities',
           body: {},
           allowFailure: true,
         );
         require(
-          probe.status == 200 && probe.data == 4,
+          probe.status == 200 && probe.data == 10,
           'NOVA database migrations are not ready',
         );
       },

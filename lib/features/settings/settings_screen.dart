@@ -7,7 +7,7 @@ import '../../core/strings.dart';
 import '../../shared/app_controls.dart';
 import '../../shared/repository.dart';
 import '../../shared/widgets.dart';
-import 'preferences_dialog.dart';
+import '../profiles/profile_fields.dart';
 
 class SettingsScreen extends StatelessWidget {
   final NovaRepository repo;
@@ -20,6 +20,33 @@ class SettingsScreen extends StatelessWidget {
       children: [
         Text(s.settings, style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 24),
+        AccountOverview(repo: repo),
+        const SizedBox(height: 16),
+        ListTile(
+          leading: const Icon(Icons.edit_outlined),
+          title: Text(s.t('تعديل ملفي وصوري', 'Edit my profile and photos')),
+          onTap: () => context.go('/profile/edit'),
+        ),
+        ListTile(
+          leading: const Icon(Icons.bookmark_outline),
+          title: Text(s.t('مفضلتي الخاصة', 'My private favorites')),
+          onTap: () => context.go('/favorites'),
+        ),
+        ListTile(
+          leading: const Icon(Icons.workspace_premium_outlined),
+          title: Text(s.t('العضوية والمشتريات', 'Membership and purchases')),
+          onTap: () => context.go('/plans'),
+        ),
+        ListTile(
+          leading: const Icon(Icons.group_add_outlined),
+          title: Text(s.t('دعواتي', 'My invitations')),
+          onTap: () => context.go('/referrals'),
+        ),
+        const Divider(height: 32),
+        Text(
+          s.t('الأمان وتفضيلات التطبيق', 'Security and app preferences'),
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         ListTile(
           leading: const Icon(Icons.password),
           title: Text(s.t('تغيير كلمة المرور', 'Change password')),
@@ -30,7 +57,7 @@ class SettingsScreen extends StatelessWidget {
           title: Text(
             s.t('تفضيلات الاكتشاف والعمر', 'Discovery and age preferences'),
           ),
-          onTap: () => editPreferences(context, repo),
+          onTap: () => context.go('/filters'),
         ),
         const Align(
           alignment: AlignmentDirectional.centerStart,
@@ -147,7 +174,9 @@ class SettingsScreen extends StatelessWidget {
         ),
         ListTile(
           leading: const Icon(Icons.download_outlined),
-          title: Text(s.t('تصدير بياناتي', 'Export my data')),
+          title: Text(
+            s.t('تصدير بيانات حسابي فقط', 'Export only my account data'),
+          ),
           onTap: () => guarded(context, () async {
             final data = await repo.exportData();
             if (context.mounted) {
@@ -167,11 +196,7 @@ class SettingsScreen extends StatelessWidget {
             }
           }),
         ),
-        ListTile(
-          leading: const Icon(Icons.admin_panel_settings_outlined),
-          title: Text(s.t('بوابة الموظفين', 'Staff portal')),
-          onTap: () => context.go('/admin'),
-        ),
+        StaffEntry(repo: repo),
         ListTile(
           leading: const Icon(Icons.logout),
           title: Text(s.t('تسجيل الخروج', 'Sign out')),
@@ -180,16 +205,20 @@ class SettingsScreen extends StatelessWidget {
         const Divider(),
         ListTile(
           leading: const Icon(Icons.delete_forever),
-          title: Text(s.t('حذف حسابي وبياناتي', 'Delete my account and data')),
+          title: Text(
+            s.t('طلب حذف حسابي وبياناتي', 'Request account and data deletion'),
+          ),
           onTap: () async {
             final confirmed = await showDialog<bool>(
               context: context,
               builder: (context) => AlertDialog(
-                title: Text(s.t('حذف نهائي؟', 'Delete permanently?')),
+                title: Text(
+                  s.t('طلب حذف الحساب؟', 'Request account deletion?'),
+                ),
                 content: Text(
                   s.t(
-                    'سيُحذف الحساب وملفه ومحادثاته. لا يمكن التراجع عن هذا الإجراء.',
-                    'Your account, profile and conversations will be deleted. This cannot be undone.',
+                    'سيُخفى ملفك ويُسجل طلب حذف بعد مهلة 7 أيام. التنفيذ يتطلب عامل حذف مخولًا ومراجعة الاحتفاظ للسلامة. يمكنك إلغاء الطلب خلال المهلة؛ لا تُحذف المحادثات فورًا.',
+                    'Your profile will be hidden and a deletion request scheduled after a 7-day grace period. Execution requires an authorized deletion worker and safety retention review. You may cancel during the grace period; chats are not immediately deleted.',
                   ),
                 ),
                 actions: [
@@ -199,20 +228,195 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   FilledButton(
                     onPressed: () => Navigator.pop(context, true),
-                    child: Text(s.t('حذف نهائي', 'Delete permanently')),
+                    child: Text(s.t('تسجيل الطلب', 'Submit request')),
                   ),
                 ],
               ),
             );
             if (confirmed == true && context.mounted) {
               await guarded(context, () async {
-                await repo.deleteAccount();
-                await repo.client.auth.signOut();
+                await repo.requestDeletion();
+                if (context.mounted) context.go('/');
               });
             }
           },
         ),
+        DeletionRequestPanel(repo: repo),
       ],
+    );
+  }
+}
+
+class AccountOverview extends StatefulWidget {
+  final NovaRepository repo;
+  const AccountOverview({super.key, required this.repo});
+  @override
+  State<AccountOverview> createState() => _AccountOverviewState();
+}
+
+class _AccountOverviewState extends State<AccountOverview> {
+  late Future<List<dynamic>> data = load();
+  Future<List<dynamic>> load() async => [
+    await widget.repo.profile(),
+    await widget.repo.membership(),
+  ];
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    return AsyncPane<List<dynamic>>(
+      future: data,
+      retry: () => setState(() {
+        data = load();
+      }),
+      builder: (all) {
+        final p = Map<String, dynamic>.from(all[0] ?? {}), m = all[1] as Map;
+        final completion = ProfileFields.completion(p);
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  p['display_name'] ?? '',
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                if (p['username'] != null) Text('@${p['username']}'),
+                const SizedBox(height: 12),
+                Text(
+                  s.t('معلومات حساب خاصة بك', 'Private account information'),
+                ),
+                SelectableText(
+                  widget.repo.client.auth.currentUser?.email ?? '',
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  s.t(
+                    'اكتمال الملف: $completion٪',
+                    'Profile completion: $completion%',
+                  ),
+                ),
+                LinearProgressIndicator(value: completion / 100),
+                const SizedBox(height: 12),
+                Text(
+                  s.t(
+                    'الحقول الإضافية اختيارية؛ يمكنك استخدام الاكتشاف دون إكمالها.',
+                    'Additional fields are optional; discovery works without completing them.',
+                  ),
+                ),
+                Text(s.t('العضوية: ${m['tier']}', 'Membership: ${m['tier']}')),
+                if (m['expires_at'] != null)
+                  Text(
+                    s.t(
+                      'انتهاء الاستحقاق: ${m['expires_at']}',
+                      'Entitlement expires: ${m['expires_at']}',
+                    ),
+                  ),
+                Text(
+                  p['verified'] == true
+                      ? s.t('تمت مراجعة التوثيق', 'Verification reviewed')
+                      : s.t(
+                          'لم يُراجع توثيق الهوية',
+                          'Identity verification not reviewed',
+                        ),
+                ),
+                if (p['created_at'] != null)
+                  Text(
+                    s.t(
+                      'عضو منذ ${p['created_at'].toString().substring(0, 10)}',
+                      'Member since ${p['created_at'].toString().substring(0, 10)}',
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class StaffEntry extends StatefulWidget {
+  final NovaRepository repo;
+  const StaffEntry({super.key, required this.repo});
+  @override
+  State<StaffEntry> createState() => _StaffEntryState();
+}
+
+class _StaffEntryState extends State<StaffEntry> {
+  late final Future<List<DbRow>> data = widget.repo.roles();
+  @override
+  Widget build(BuildContext context) => FutureBuilder<List<DbRow>>(
+    future: data,
+    builder: (context, snapshot) {
+      if (!(snapshot.data ?? []).any(
+        (r) => ['moderator', 'administrator'].contains(r['role']),
+      )) {
+        return const SizedBox.shrink();
+      }
+      return ListTile(
+        leading: const Icon(Icons.admin_panel_settings_outlined),
+        title: Text(
+          Strings.of(context)
+              .t('بوابة الإشراف المخوّلة', 'Authorized moderation portal'),
+        ),
+        onTap: () => context.go('/admin'),
+      );
+    },
+  );
+}
+
+class DeletionRequestPanel extends StatefulWidget {
+  final NovaRepository repo;
+  const DeletionRequestPanel({super.key, required this.repo});
+  @override
+  State<DeletionRequestPanel> createState() => _DeletionRequestPanelState();
+}
+
+class _DeletionRequestPanelState extends State<DeletionRequestPanel> {
+  late Future<DbRow?> data = widget.repo.client
+      .from('account_deletion_requests')
+      .select()
+      .eq('user_id', widget.repo.uid)
+      .maybeSingle();
+  @override
+  Widget build(BuildContext context) {
+    final s = Strings.of(context);
+    return FutureBuilder<DbRow?>(
+      future: data,
+      builder: (context, result) {
+        if (result.data == null || result.data!['cancelled_at'] != null) {
+          return const SizedBox.shrink();
+        }
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                Text(
+                  s.t(
+                    'يوجد طلب حذف محفوظ. التنفيذ بعد ${result.data!['execute_after']} ومراجعة مخولة.',
+                    'Deletion requested. Execution after ${result.data!['execute_after']} and authorized review.',
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => guarded(context, () async {
+                    await widget.repo.requestDeletion(cancel: true);
+                    if (mounted) {
+                      setState(() {
+                        data = Future.value(null);
+                      });
+                    }
+                  }),
+                  child: Text(
+                    s.t('إلغاء طلب الحذف', 'Cancel deletion request'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

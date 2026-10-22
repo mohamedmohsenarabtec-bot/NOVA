@@ -204,6 +204,7 @@ class BrowserProbe {
     required String expectedMessage,
     bool readinessOnly = false,
     bool adminOnly = false,
+    bool expanded = false,
   }) async {
     final uri = Uri.parse(url);
     if (uri.scheme != 'https' ||
@@ -300,6 +301,41 @@ class BrowserProbe {
         return;
       }
       await browser.waitText('People, with intention');
+      if (expanded) {
+        for (final page in {
+          '/account': 'Edit my profile and photos',
+          '/profile/edit': 'Display name',
+          '/filters': 'Apply',
+          '/favorites': 'favorites',
+          '/liked': 'Liked',
+          '/notifications': 'Your notifications',
+          '/referrals': 'invitation',
+          '/plans': 'illustrative and unapproved',
+        }.entries) {
+          stage = 'real authenticated screen ${page.key}';
+          await browser.command('Page.navigate', {
+            'url': uri.replace(fragment: page.key).toString(),
+          });
+          await browser.enableSemantics();
+          await browser.waitText(page.value);
+          if (page.key == '/account') {
+            final staffVisible = await browser.evaluate(
+              "(()=>{$dom return all('[role=button]').some(e=>label(e).includes('Staff portal'));})()",
+            );
+            if (staffVisible == true) {
+              throw StateError('Ordinary user sees staff portal');
+            }
+          }
+        }
+        await browser.command('Emulation.setDeviceMetricsOverride', {
+          'width': 390,
+          'height': 844,
+          'deviceScaleFactor': 1,
+          'mobile': true,
+        });
+        await browser.screenshot('.local/browser-mobile-plans.png');
+        await browser.command('Emulation.clearDeviceMetricsOverride');
+      }
       stage = 'open real persistent conversation';
       final chatUrl = uri.replace(fragment: '/chat/$conversationId').toString();
       await browser.command('Page.navigate', {'url': chatUrl});
