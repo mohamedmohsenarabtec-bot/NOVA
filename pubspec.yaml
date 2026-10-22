@@ -1,7 +1,7 @@
 name: nova
 description: Arabic-first intentional social discovery.
 publish_to: none
-version: 0.3.0+3
+version: 0.3.0+4
 environment:
   sdk: ^3.13.5
 dependencies:

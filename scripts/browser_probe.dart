@@ -8,6 +8,7 @@ class BrowserProbe {
   final WebSocket socket;
   final pending = <int, Completer<Map<String, dynamic>>>{};
   final messageRequests = <String>[];
+  final photoStatuses = <int>[];
   int sequence = 0;
   BrowserProbe(this.socket) {
     socket.listen((event) {
@@ -17,6 +18,10 @@ class BrowserProbe {
       if (value['method'] == 'Network.responseReceived') {
         final params = value['params'] as Map;
         final response = params['response'] as Map;
+        if (Uri.tryParse(response['url'] as String)?.path ==
+            '/functions/v1/profile-photo') {
+          photoStatuses.add((response['status'] as num).toInt());
+        }
         if (Uri.tryParse(response['url'] as String)?.path ==
             '/rest/v1/messages') {
           messageRequests.add(params['requestId'] as String);
@@ -306,6 +311,12 @@ class BrowserProbe {
           });
           await browser.enableSemantics();
           await browser.waitText(page.value);
+          if (page.key == '/profile/edit') {
+            await browser.until(
+              () async => browser!.photoStatuses.contains(200),
+              'authenticated browser photo delivery',
+            );
+          }
           if (page.key == '/account') {
             final staffVisible = await browser.evaluate(
               "(()=>{$dom return all('[role=button]').some(e=>label(e).includes('Staff portal'));})()",
