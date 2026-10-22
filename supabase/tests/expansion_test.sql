@@ -102,5 +102,20 @@ set local request.jwt.claim.sub='00000000-0000-0000-0000-000000000102';
 select is((select count(*)::int from public.profile_photos where owner_id='00000000-0000-0000-0000-000000000103'),0,'private photo metadata denied to eligible peer');
 select is(jsonb_array_length(public.public_profile('00000000-0000-0000-0000-000000000103')->'photos'),0,'private photo absent from public projection');
 reset role;
+-- Reward checks run only in this rollback transaction; production stays OFF.
+update public.feature_flags set enabled=true,config='{"extra_likes":9,"days":2,"minimum_age_days":7,"monthly_cap":1}' where key='referral_rewards';
+update public.membership_offers set features=jsonb_set(features,'{daily_likes}','17') where tier='free' and months=1;
+select is(private.like_allowance('00000000-0000-0000-0000-000000000101'),17,'daily allowance follows configured product');
+update public.profiles set created_at=now()-interval '8 days' where id in ('00000000-0000-0000-0000-000000000102','00000000-0000-0000-0000-000000000103');
+insert into public.matches(user_a,user_b) values('00000000-0000-0000-0000-000000000102','00000000-0000-0000-0000-000000000103');
+insert into public.referrals(id,inviter_id,invitee_id,state,reviewed_at) values
+('00000000-0000-0000-0000-000000000201','00000000-0000-0000-0000-000000000101','00000000-0000-0000-0000-000000000103','qualified',now()),
+('00000000-0000-0000-0000-000000000202','00000000-0000-0000-0000-000000000101','00000000-0000-0000-0000-000000000102','qualified',now());
+select lives_ok($$select public.grant_referral_reward('00000000-0000-0000-0000-000000000201')$$,'authorized approved reward grants temporary benefit');
+select is(private.like_allowance('00000000-0000-0000-0000-000000000101'),26,'reward allowance follows configured amount');
+select ok((select expires_at between now()+interval '47 hours' and now()+interval '49 hours' from public.referral_rewards where referral_id='00000000-0000-0000-0000-000000000201'),'configured reward duration is enforced');
+select lives_ok($$select public.grant_referral_reward('00000000-0000-0000-0000-000000000201')$$,'retry is idempotent');
+select is((select count(*)::int from public.referral_rewards),1,'retry cannot duplicate reward');
+select throws_ok($$select public.grant_referral_reward('00000000-0000-0000-0000-000000000202')$$,'P0001','Referral not eligible','configured monthly cap rejects another reward');
 select * from finish();
 rollback;
