@@ -103,6 +103,12 @@ select is((select count(*)::int from public.profile_photos where owner_id='00000
 select is(jsonb_array_length(public.public_profile('00000000-0000-0000-0000-000000000103')->'photos'),0,'private photo absent from public projection');
 reset role;
 -- Reward checks run only in this rollback transaction; production stays OFF.
+insert into public.profile_photos(owner_id,path,visibility,ready) values('00000000-0000-0000-0000-000000000103','00000000-0000-0000-0000-000000000103/matched.jpg','matches',true);
+set local role authenticated;
+set local request.jwt.claim.sub='00000000-0000-0000-0000-000000000101';
+select is((select count(*)::int from public.profile_photos where owner_id='00000000-0000-0000-0000-000000000103'),0,'ended match cannot read restricted photo metadata');
+select is((public.public_profile('00000000-0000-0000-0000-000000000103')->>'is_match')::bool,false,'ended match is not presented as mutual');
+reset role;
 update public.feature_flags set enabled=true,config='{"extra_likes":9,"days":2,"minimum_age_days":7,"monthly_cap":1}' where key='referral_rewards';
 update public.membership_offers set features=jsonb_set(features,'{daily_likes}','17') where tier='free' and months=1;
 select is(private.like_allowance('00000000-0000-0000-0000-000000000101'),17,'daily allowance follows configured product');
