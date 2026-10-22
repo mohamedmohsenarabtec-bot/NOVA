@@ -26,14 +26,21 @@ class NovaBootstrap extends StatefulWidget {
 
 class _NovaBootstrapState extends State<NovaBootstrap> {
   Future<void>? backend;
+  String startupStage = 'preferences';
   late Future<NovaPreferences> startup = load();
   Future<NovaPreferences> load() => (widget.loader?.call() ?? initialize())
-      .timeout(const Duration(seconds: 26));
+      .timeout(const Duration(seconds: 26))
+      .catchError((Object error, StackTrace trace) {
+        // Never log exception messages, URLs, sessions or credentials.
+        debugPrint('NOVA startup: $startupStage / ${error.runtimeType}');
+        Error.throwWithStackTrace(error, trace);
+      });
   Future<NovaPreferences> initialize() async {
     final preferences = NovaPreferences(
       await SharedPreferences.getInstance().timeout(const Duration(seconds: 6)),
     );
     if (!Config.configured) return preferences;
+    startupStage = 'backend';
     backend ??=
         Supabase.initialize(
           url: Config.url,
@@ -44,6 +51,7 @@ class _NovaBootstrapState extends State<NovaBootstrap> {
           throw error;
         });
     await backend!.timeout(const Duration(seconds: 12));
+    startupStage = 'capabilities';
     final version = await Supabase.instance.client
         .rpc('client_capabilities')
         .timeout(const Duration(seconds: 12));

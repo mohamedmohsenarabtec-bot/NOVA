@@ -10,7 +10,16 @@ adb exec-out screencap -p > "$evidence/online.png"
 adb shell uiautomator dump /sdcard/nova-online.xml
 adb pull /sdcard/nova-online.xml "$evidence/online.xml"
 adb logcat -d -s AndroidRuntime:E flutter:E > "$evidence/runtime.txt"
+adb logcat -d -s flutter:I > "$evidence/flutter-startup.txt"
+adb shell date -u > "$evidence/device-time.txt"
+adb shell settings get global http_proxy > "$evidence/proxy.txt"
 if grep -q 'FATAL EXCEPTION' "$evidence/runtime.txt"; then exit 1; fi
+if grep -q 'Retry' "$evidence/online.xml"; then
+  echo 'INCOMPLETE: installed APK did not reach authentication while online.'
+  exit 1
+fi
+# Require the actual Arabic default authentication screen, not just a live PID.
+grep -q 'تسجيل الدخول' "$evidence/online.xml"
 # A disconnected startup must draw a Flutter error/retry view, never hang on
 # the OS launch image. No accounts or passwords are used in this test.
 adb shell am force-stop com.nova.app.nova

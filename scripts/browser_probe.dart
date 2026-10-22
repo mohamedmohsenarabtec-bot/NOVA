@@ -133,33 +133,21 @@ class BrowserProbe {
         ),
       ),
     );
-    await evaluate(
-      '''(()=>{$dom const e=all('[role=menuitemcheckbox]').find(e=>label(e)===${jsonEncode(english ? 'English' : 'العربية')}); if(e){const target=e.querySelector('input')||e;target.focus();target.click();} })()''',
+    final focused = await evaluate(
+      '''(()=>{$dom const e=all('[role=menuitemcheckbox]').find(e=>label(e)===${jsonEncode(english ? 'English' : 'العربية')});if(!e)return false;e.focus();return document.activeElement===e;})()''',
     );
-    // Use native menu keyboard navigation: semantics text nodes can consume a
-    // synthetic DOM click without activating the enclosing checked menu item.
-    for (final key in ['Enter']) {
+    if (focused != true) throw StateError('Language option unavailable');
+    // Focus and activate exactly once; semantics bounds can extend outside
+    // Chrome's viewport even when the visual Flutter menu is correctly placed.
+    for (final type in ['keyDown', 'keyUp']) {
       await command('Input.dispatchKeyEvent', {
-        'type': 'keyDown',
-        'key': key,
-        'code': key,
-        'windowsVirtualKeyCode': key == 'Enter'
-            ? 13
-            : key == 'End'
-            ? 35
-            : 36,
-      });
-      await command('Input.dispatchKeyEvent', {
-        'type': 'keyUp',
-        'key': key,
-        'code': key,
-        'windowsVirtualKeyCode': key == 'Enter'
-            ? 13
-            : key == 'End'
-            ? 35
-            : 36,
+        'type': type,
+        'key': 'Enter',
+        'code': 'Enter',
+        'windowsVirtualKeyCode': 13,
       });
     }
+    await waitText(english ? 'Language: English' : 'اللغة: العربية');
   }
 
   Future<void> waitPersistentMessage(String expected) => until(() async {
