@@ -14,7 +14,6 @@ revoke all on function private.profile_projection(public.profiles) from public,a
 
 -- Shared completion/age validation remains unchanged. Old clients receive a
 -- schema version >=4; the new client requires all eight migrations.
-create or replace function public.client_readiness() returns integer language sql stable security invoker set search_path='' as $$select 8;$$;
 
 -- Operator maintenance only. No deletion/retention action is exposed to users.
 create function public.retention_maintenance() returns void language plpgsql security definer set search_path='' as $$

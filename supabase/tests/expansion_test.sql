@@ -3,6 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
 select no_plan();
+select is(public.client_capabilities(),9,'new capability probe coexists with legacy version');
 insert into auth.users(id,email,raw_user_meta_data,email_confirmed_at) values
 ('00000000-0000-0000-0000-000000000101','fixture-a@nova.invalid','{"birth_date":"1995-01-01","consent_version":"draft-v1"}',now()),
 ('00000000-0000-0000-0000-000000000102','fixture-b@nova.invalid','{"birth_date":"1994-01-01","consent_version":"draft-v1"}',now()),

@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path=public,extensions;
 select plan(31);
-select is(public.client_readiness(),9,'installed client schema version');
+select is(public.client_readiness(),4,'installed client schema version');
 
 select throws_ok($$insert into auth.users(id,raw_user_meta_data) values('00000000-0000-0000-0000-000000000099','{"birth_date":"2020-01-01","consent_version":"draft-v1"}')$$, 'P0001','Adults 18+ only','backend rejects minors');
 insert into auth.users(id,raw_user_meta_data) values

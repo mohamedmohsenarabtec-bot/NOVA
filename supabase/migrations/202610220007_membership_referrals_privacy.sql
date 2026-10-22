@@ -104,7 +104,6 @@ create or replace function public.export_my_data() returns jsonb language sql st
  'notifications',coalesce((select jsonb_agg(to_jsonb(x)) from public.notifications x where user_id=auth.uid()),'[]'));
 $$;
 grant execute on function public.membership_status(),public.referral_progress(),public.claim_referral(text),public.review_referral(uuid,boolean),public.request_account_deletion(boolean) to authenticated;
-create or replace function public.client_readiness() returns integer language sql stable security invoker set search_path='' as $$ select 7; $$;
 
 -- Supabase projects can have default EXECUTE grants to API roles in addition
 -- to PUBLIC. Explicitly close every new function before granting the API list.

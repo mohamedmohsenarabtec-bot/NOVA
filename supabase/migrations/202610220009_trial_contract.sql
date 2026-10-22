@@ -17,4 +17,8 @@ begin
 end; $$;
 revoke all on function public.activate_verified_trial(uuid,text,text) from public,anon,authenticated;
 grant execute on function public.activate_verified_trial(uuid,text,text) to service_role;
-create or replace function public.client_readiness() returns integer language sql stable security invoker set search_path='' as $$select 9;$$;
+-- Legacy readiness stays 4 so already installed clients keep working during
+-- rollout. New clients require this separate, anonymous-safe capability probe.
+create function public.client_capabilities() returns integer language sql stable security invoker set search_path='' as $$select 9;$$;
+revoke all on function public.client_capabilities() from public,anon,authenticated;
+grant execute on function public.client_capabilities() to anon,authenticated;
