@@ -103,3 +103,15 @@ create or replace function public.export_my_data() returns jsonb language sql st
 $$;
 grant execute on function public.membership_status(),public.referral_progress(),public.claim_referral(text),public.review_referral(uuid,boolean),public.request_account_deletion(boolean) to authenticated;
 create or replace function public.client_readiness() returns integer language sql stable security invoker set search_path='' as $$ select 7; $$;
+
+-- Supabase projects can have default EXECUTE grants to API roles in addition
+-- to PUBLIC. Explicitly close every new function before granting the API list.
+do $$ declare fn text; begin
+ for fn in select p.oid::regprocedure::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+ where (n.nspname='private' and p.proname in ('tier','profile_completion','may_view_profile','may_read_photo','profile_projection','notify','expire_interactions','identity_fingerprint'))
+ or (n.nspname='public' and p.proname in ('save_profile_core','public_profile','save_profile','save_discovery_filters','discover_profiles','discovery_summary','toggle_favorite','favorite_profiles','prepare_profile_photo','finalize_profile_photo','manage_profile_photos','interaction_overview','end_match','chat_list','mark_chat_read','notification_inbox','read_notifications','membership_status','referral_progress','claim_referral','review_referral','grant_referral_reward','request_account_deletion'))
+ loop execute 'revoke all on function '||fn||' from public,anon,authenticated'; end loop;
+end $$;
+revoke all on private.identity_salt,private.benefit_history from public,anon,authenticated;
+grant execute on function private.may_read_photo(public.profile_photos),public.save_profile(jsonb),public.public_profile(uuid),public.save_discovery_filters(jsonb),public.discover_profiles(integer),public.discovery_summary(),public.toggle_favorite(uuid,boolean),public.favorite_profiles(),public.prepare_profile_photo(text),public.finalize_profile_photo(uuid),public.manage_profile_photos(uuid,text,uuid[],boolean),public.interaction_overview(),public.end_match(uuid),public.chat_list(),public.mark_chat_read(uuid),public.notification_inbox(integer),public.read_notifications(uuid),public.membership_status(),public.referral_progress(),public.claim_referral(text),public.review_referral(uuid,boolean),public.request_account_deletion(boolean) to authenticated;
+grant execute on function public.grant_referral_reward(uuid) to service_role;

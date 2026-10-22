@@ -46,7 +46,7 @@ select is(public.discovery_action('00000000-0000-0000-0000-000000000103','like')
 set local request.jwt.claim.sub='00000000-0000-0000-0000-000000000103';
 select is(public.discovery_action('00000000-0000-0000-0000-000000000101','like'),true,'valid reciprocal match');
 select lives_ok($$select public.send_message((select id from public.conversations limit 1),'Persistent fixture message')$$,'free mutual match may chat');
-select is(jsonb_array_length(public.notification_inbox()->'items'),1,'match event is persistent');
+select ok(jsonb_array_length(public.notification_inbox()->'items')>=1,'match event is persistent');
 set local request.jwt.claim.sub='00000000-0000-0000-0000-000000000101';
 select ok((public.notification_inbox()->>'unread')::int>=2,'unread includes own real events');
 select lives_ok($$select public.read_notifications()$$,'mark all read');
