@@ -321,6 +321,8 @@ class BrowserProbe {
           'deviceScaleFactor': 1,
           'mobile': true,
         });
+        await browser.waitText('illustrative and unapproved');
+        await Future<void>.delayed(const Duration(milliseconds: 500));
         await browser.screenshot('.local/browser-mobile-plans.png');
         await browser.command('Emulation.clearDeviceMetricsOverride');
       }

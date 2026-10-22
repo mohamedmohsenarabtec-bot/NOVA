@@ -247,11 +247,11 @@ class _SessionGateState extends State<SessionGate> {
           ),
           NavigationDestination(
             icon: const Icon(Icons.chat_bubble_outline),
-            label: s.chats,
+            label: s.t('دردشة', 'Chats'),
           ),
           NavigationDestination(
             icon: const Icon(Icons.auto_awesome_outlined),
-            label: s.plans,
+            label: s.t('العضوية', 'Plans'),
           ),
           NavigationDestination(
             icon: const Icon(Icons.favorite_border),
@@ -259,7 +259,7 @@ class _SessionGateState extends State<SessionGate> {
           ),
           NavigationDestination(
             icon: const Icon(Icons.person_outline),
-            label: s.settings,
+            label: s.t('حسابي', 'Account'),
           ),
         ];
         return Scaffold(

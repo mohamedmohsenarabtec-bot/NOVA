@@ -71,7 +71,9 @@ class _NovaBootstrapState extends State<NovaBootstrap> {
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
         theme: NovaTheme.create(Brightness.light),
         darkTheme: NovaTheme.create(Brightness.dark),
-        home: Scaffold(
+        // This temporary view must not create a Navigator: doing so can
+        // replace a web deep link with '/' before GoRouter is initialized.
+        builder: (context, _) => Scaffold(
           body: Center(
             child: SingleChildScrollView(
               child: Padding(
